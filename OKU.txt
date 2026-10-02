@@ -1,0 +1,53 @@
+BURS SİSTEMİ v9
+
+LOCALHOST (bilgisayar / Termux)
+  Termux : cd ~/storage/downloads && unzip -o BursSistemi.zip -d ~ && sh ~/BursSistemi/baslat.sh
+  Windows: zip'i aç, Baslat.bat'a çift tıkla
+  Linux/Mac: sh baslat.sh        Port değiştirmek için: PORT=9090 sh baslat.sh
+  Adres: http://localhost:8080
+  Güncelleme: yeni zip'i aynı komutla aç (unzip -o). data/ klasörüne (başvurular, belgeler) dokunulmaz.
+
+GITHUB PAGES (sunucusuz demo, veriler tarayıcıda)
+  İlk kurulum (repo ana dizini = BursSistemi klasörü):
+    git init && git add -A && git commit -m ilk && git branch -M main && git remote add origin https://github.com/KULLANICI/BursSistemi.git && git push -u origin main
+    Sonra repo Settings > Pages > Source: GitHub Actions
+  Sonraki her güncelleme (tek komut):
+    sh github-yukle.sh        (Windows: github-yukle.bat)
+  Adres: https://KULLANICI.github.io/BursSistemi/
+
+Demo giriş: yönetici admin / 123 (sabit, değiştirilemez)  |  öğrenci: herhangi 11 haneli TCKN / 123
+
+Öğrenci akışı: Şartlar > Kimlik (ad-soyad, T.C., sınıf, anne, baba) > Belgeler > Başvuru Formu (belgelerden otomatik dolar) > Özet/Gönder
+- Başvuru Formu: Word formundaki tüm sorular (kimlik, iletişim, eğitim, ekonomik durum, anne/baba, aile) belgelerden ÖNCE sorulur. Ad yazılırken son kelime soyad sayılır; yalnız ad yazılırsa öğrencinin soyadı kullanılır. Belgeler yüklenince yazdığınız cevapların üzerine yazılmaz.
+- Başvuru formu ayrıca yüklenmez.
+- Her belgede kişinin adı veya T.C. no görünmeli. e-Devlet belgeleri son 30 gün içinde olmalı. Adli sicil: öğrenci + anne + baba.
+- Belgeler toplu seçilebilir; hepsi paralel okunur, sonuç sonda özetlenir.
+
+- e-Devlet ekran görüntülerinde soyad gizli olabilir; belgede kişinin adı (veya T.C. no) görünmesi yeterli. Adı görünmeyen kaydırılmış ekranlar aynı türde tek belge varsa ona eklenir, değilse “Kime ait?” sorulur. Aynı belge iki kez yüklenirse atlanır.
+- Demo modunda yüklenen dosyalar tarayıcıda (IndexedDB) saklanır; yönetici panelinde açılır. Aynı tarayıcıdan öğrenci olarak yükleyip admin ile girin.
+
+- Yönetici: başvuru ayrıntısında kullanıcı adı, e-posta ve şifre görünür. Dışa aktarma: Excel (varsayılan), sağdaki oktan CSV. Puanlama ağırlıkları “Şartlar ve Puanlama” sayfasında açılır bölümdedir.
+- Demo: alttaki “Belge” sekmesine 10 kez basınca tüm adımlar açılır ve başvuru formuna gidilir; formda “Demo verisiyle doldur” düğmesi vardır.
+
+v7 NOTLARI
+- Kira kontratı (öğrenci + aile) ve 4A/4B/4C (öğrenci, anne, baba) artık koşulsuz zorunlu. Belge yoksa slottaki "Yok" düğmesi kaydı "yok" olarak yükler.
+- Belge sekmesine 10 kez basınca (demo VE gerçek sunucuda) tüm adımlar açılır, doğrudan Başvuru Formu'na geçer; eksik belgeyle de "Onaya Gönder" çalışır (yönetici panelinde "demo gönderim" etiketi).
+- Sunucu ayarları (ortam değişkeni): ADMIN_PW=şifre  DEMO_TAP=0 (10 tık kapanır)  AUTO_USER=0 (bilinmeyen TCKN otomatik açılmaz)
+  Örnek: ADMIN_PW=GucluSifre DEMO_TAP=0 PORT=8080 node server.js
+- İkametgâh adresi artık kesilmiyor (100 karakter sınırı kaldırıldı).
+- YKS: TYT/SAY/EA/SÖZ/DİL başarı sırası + yerleştirme puanı/sırası forma ve yönetici paneli/Excel'e eklendi.
+- Her yüklemeden hemen sonra başvuru kaydedilir; yönetici paneli 10 sn'de bir kendini yeniler. Demo verisi artık IndexedDB'de (kota dolmaz).
+- v8: Giriş ekranı düzeltildi: alanlar form içinde (tarayıcı otomatik doldurma/Enter uyumlu), açılıştaki oturum kontrolü yazılanları silmiyor, hatada TC/şifre kalıyor ve hata mesajı kutunun içinde görünüyor.
+
+v9 NOTLARI (2027 Eylül dönemi hazırlığı)
+- DÖNEM: Yönetici paneli > "Dönem" sekmesi. Varsayılan "2027-2028 Burs Dönemi", 01.09.2027 - 30.09.2027 (TTO duyurusuna göre güncelleyin; 2026 dönemi 9-25 Eylül idi). "Tarihlere uyulsun" açıkken öğrenci tarih dışında başvuru GÖNDEREMEZ ama önceden kayıt olup hazırlanabilir. Giriş ekranında ve Şartlar'da dönem bandı görünür.
+- Şartlar sayfasına tto.org.tr/ogrenci-bursu bilgileri eklendi (Tekirdağ'daki devlet üniversitesi tıp öğrencileri, iletişim).
+- DEMO / GERÇEK GÖRÜNÜM: Varsayılan DEMO. Giriş ekranındaki Tabip Odası logosuna 10 kez art arda dokunun -> gerçek site görünümü (DEMO etiketi, demo hesap düğmeleri, örnek veri, "Demo verisiyle doldur", Belge sekmesi 10 tık: hiçbiri yok; yalnızca gerçek kayıt/şifre ile giriş). Tekrar 10 kez dokunun -> demoya döner. Demo ve gerçek veriler ayrı tutulur.
+  Sunucuda kesin kilit: MOD=canli (hep gerçek, demo özellikleri tamamen kapalı) veya MOD=demo (hep demo). Örnek:  MOD=canli ADMIN_PW=GucluSifre node server.js
+  UYARI: GitHub Pages sürümü sunucusuzdur; veriler her kullanıcının kendi tarayıcısındadır. Gerçek başvuru toplamak için sunucu (node server.js) gerekir.
+- YARDIM: Üst çubuktaki ? simgesi (giriş, öğrenci, yönetici; demo ve gerçek). Yönetici ilk girişte rehber kendiliğinden açılır; her sekmede ? ilgili bölüme götürür.
+- EK BELGE / EK SORU: Yönetici > "Ek Belge ve Sorular". Yeni belge: ad, kime ait, kategori, zorunlu/isteğe bağlı, "Yok" düğmesi ve OCR kuralları (kişi adı görünmeli, hepsi/en az biri geçmeli, geçmemeli, en fazla kaç günlük, en az karakter, "Etiket: değer" ile soruyu otomatik doldurma). "Dene" düğmesiyle örnek metin/dosya üzerinde kural sonucu görülür.
+- GÜVENLİK: giriş denemesi sınırı (7 hata -> 10 dk kilit), istek sınırı, güvenlik başlıkları (CSP, nosniff, çerçeve engeli), yükleme türü içerikten doğrulanır (yalnız PDF/JPG/PNG/WEBP), dosyalar kimlik doğrulamalı açılır (adres çubuğunda anahtar yok), oturum 14 gün, gerçek kayıtlarda şifre düz metin saklanmaz (yönetici "Şifreyi sıfırla" ile geçici şifre verir), gerçek kayıtta şifre en az 8 karakter, yönetici şifresi MOD=canli'da rastgele üretilir (data/admin-sifre.txt) ve panelden değiştirilebilir.
+- BAKIM: data/yedek/ içine günlük otomatik yedek (son 14 gün). Güncelleme: yeni zip'i aynı yere açın; data/ silinmez.
+- Yeni dönem: Excel indirin > yönetici paneli "Tüm verileri sil" > Dönem sekmesinde yeni tarihleri girin.
+- GitHub'a yükleme: sh github-yukle.sh (Windows: github-yukle.bat) - depo adresini ilk seferde sorar. Pages çalışmazsa: depo > Settings > Pages > Source = GitHub Actions.
