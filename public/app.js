@@ -4,7 +4,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
 const $ = s => document.querySelector(s);
 const E = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const { N, tcase, WN, D, SL } = L;
-const S = { user: null, token: localStorage.tto_token || '', app: null, tab: 'terms', f: { q: '', st: 'all', who: 'all', cat: 'all' }, mode: 'in', log: '', adm: { list: [], set: null, view: 'list', rows: [], q: '', st: 'all', cls: 'all', kind: 'all', res: 'all', miss: false, incMin: '', incMax: '', pcMax: '', house: 'all', car: 'all', sibMin: '', gnoMin: '', dead: false, away: false, dis: false, sort: 'rank', dir: 1, sel: null } };
+try { if (window.DEMO) { localStorage.removeItem('tto_token'); localStorage.removeItem('tto_help_admin'); } } catch (e) {}
+const S = { user: null, token: (window.DEMO ? '' : localStorage.tto_token) || '', app: null, tab: 'terms', f: { q: '', st: 'all', who: 'all', cat: 'all' }, mode: 'in', log: '', adm: { list: [], set: null, view: 'list', rows: [], q: '', st: 'all', cls: 'all', kind: 'all', res: 'all', miss: false, incMin: '', incMax: '', pcMax: '', house: 'all', car: 'all', sibMin: '', gnoMin: '', dead: false, away: false, dis: false, sort: 'rank', dir: 1, sel: null } };
 let F, A;
 
 const toast = m => { const t = $('#tt'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), 3200); };
@@ -44,7 +45,7 @@ async function boot() {
   render();
   if (S.token) { try { const d = await api('/api/me'); setUser(d); render(); } catch (e) { if (e.status === 401 || e.status === 403) { S.token = ''; localStorage.removeItem('tto_token'); } } }
 }
-function setUser(d) { S.user = d.user; S.unlock = window.DEMO && d.user.role === 'student' ? 1 : S.unlock; if (d.cfg) { L.setCustom(d.cfg.custom); S.term = d.cfg.term; } S.demoUser = !!d.demo; if (d.app) { A = S.app = d.app; F = A.F; F._a = F._a || {}; A.docs = (A.docs || []).filter(d => d.k === '?' || L.known(d.k)); S.tab = firstOpen(); } if (d.user.role === 'admin') loadAdmin(); }
+function setUser(d) { S.user = d.user; if (d.cfg) { L.setCustom(d.cfg.custom); S.term = d.cfg.term; } S.demoUser = !!d.demo; if (d.app) { A = S.app = d.app; F = A.F; F._a = F._a || {}; A.docs = (A.docs || []).filter(d => d.k === '?' || L.known(d.k)); S.tab = firstOpen(); } if (d.user.role === 'admin') loadAdmin(); }
 let loging = false;
 async function login() {
   if (loging) return;
@@ -54,7 +55,8 @@ async function login() {
   loging = true;
   const btn0 = '<span>Giriş Yap</span><span class="ms">arrow_forward</span>';
   if (b) { b.disabled = true; b.innerHTML = '<span class="ms spin">progress_activity</span><span>Giriş yapılıyor…</span>'; }
-  try { const d = await api('/api/login', { method: 'POST', json: { tc, pw } }); S.token = d.token; localStorage.tto_token = d.token; const me = await api('/api/me'); setUser(me); render(); }
+  S.lt = tc; S.lp = pw;
+  try { const d = await api('/api/login', { method: 'POST', json: { tc, pw } }); S.token = d.token; localStorage.tto_token = d.token; const me = await api('/api/me'); S.lt = S.lp = ''; setUser(me); render(); }
   catch (e) {
     S.user = null; const b2 = $('#lbtn'), er2 = $('#lerr'); if (er2) er2.textContent = e.message; toast(e.message);
     const c = $('#lcard'); if (c) { c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }
@@ -71,12 +73,16 @@ async function register() {
   catch (e) { toast(e.message); }
 }
 
-const FL = [['ad', 'Adınız – Soyadınız', 't', 1], ['tc', 'T.C. Kimlik Numaranız', 't', 1], ['dogum', 'Doğum Yeri ve Tarihiniz', 't', 1], ['adres', 'İkamet Adresiniz', 'a', 1], ['tel', 'Telefon Numaranız', 't', 1], ['mail', 'Elektronik Posta Adresiniz', 't', 1],
-  ['okul', 'En Son Mezun Olduğunuz Okul', 't', 2], ['gecmisBurs', 'Geçmişte Burs Aldınız mı?', 'y', 2], ['fakulte', 'Kayıtlı Olduğunuz Tıp Fakültesi', 's', 2, [UNI]], ['giris', 'Tıp Fakültesi Giriş Tarihiniz', 't', 2], ['sinif', 'Sınıfınız', 't', 2], ['okulno', 'Okul Numaranız', 't', 2], ['gno', 'Önceki Dönem Not Ortalamanız', 't', 2], ['dil', 'Bildiğiniz Yabancı Diller', 't', 2], ['yksTyt', 'YKS – TYT Başarı Sırası (Puan)', 't', 2], ['yksSay', 'YKS – Sayısal (SAY) Başarı Sırası (Puan)', 't', 2], ['yksEa', 'YKS – Eşit Ağırlık (EA) Başarı Sırası (Puan)', 't', 2], ['yksSoz', 'YKS – Sözel (SÖZ) Başarı Sırası (Puan)', 't', 2], ['yksDil', 'YKS – Dil Başarı Sırası (Puan)', 't', 2], ['yerlesPuan', 'ÖSYM Yerleştirme Puanı', 't', 2], ['yerlesSira', 'ÖSYM Yerleştirme Başarı Sırası', 't', 2],
-  ['medeni', 'Medeni Durumunuz', 's', 3, ['Bekar', 'Evli']], ['cocuk', 'Çocuk Sayısı', 't', 3], ['gelir', 'Çalışıyorsanız Aylık Geliriniz', 't', 3], ['malvarlik', 'Taşınır – Taşınmaz Malvarlığınız', 'a', 3], ['ozelBurs', 'Burs Aldığınız Özel Kurumlar', 't', 3], ['ozelMik', 'Aylık Burs Miktarı (özel)', 't', 3], ['kamuBurs', 'Burs Aldığınız Kamu Kurumları', 't', 3], ['kamuMik', 'Aylık Burs Miktarı (kamu)', 't', 3], ['tabipBurs', 'Tabip Odası’ndan Burs Aldınız mı?', 'y', 3], ['ailedeMi', 'Ailenizle mi ikamet ediyorsunuz?', 'y', 3], ['yurt', 'Yurtta Kalıyorsanız Adı – Adresi', 't', 3], ['kira', 'Evde Kalıyorsanız Kira Miktarı', 't', 3], ['evArk', 'Varsa Ev Arkadaşı Sayısı', 't', 3], ['gider', 'Aylık Giderleriniz (Ücret, Kira, Fatura vb.)', 't', 3], ['engel', 'Bedensel Bir Engeliniz Var mı?', 'y', 3], ['hobi', 'Hobiler ve Özel Uğraşı Alanlarınız', 't', 3], ['dernek', 'Üye Olduğunuz Dernek Vb.', 't', 3]];
-const PF = p => [[p + '.ad', 'Adı – Soyadı', 't'], [p + '.tc', 'T.C. Kimlik No', 't'], [p + '.hayat', 'Hayatta mı?', 'y'], [p + '.adres', 'İkamet Adresi', 'a'], [p + '.meslek', 'Meslek ya da Yaptığı İş', 't'], [p + '.isyeri', 'Çalıştığı Yerin Adresi', 'a'], [p + '.gelir', 'Aylık Geliri', 't'], [p + '.tel', 'Telefon Numarası', 't']];
+const YILLAR = Array.from({ length: 14 }, (_, i) => String(2027 - i)), SAYI = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => String(a + i));
+const DIL = ['Yok', 'İngilizce', 'Almanca', 'Fransızca', 'Arapça', 'Rusça', 'İngilizce, Almanca', 'İngilizce, Fransızca', 'Diğer'];
+const MESLEK = ['Ev hanımı', 'Çalışmıyor', 'Emekli', 'Çiftçi', 'Esnaf', 'İşçi', 'Memur', 'Öğretmen', 'Sağlık çalışanı', 'Şoför', 'Serbest meslek', 'Diğer'];
+const OZELB = ['Yok', 'Belediye bursu', 'Vakıf / dernek bursu', 'Özel şirket bursu', 'Diğer'], KAMUB = ['Yok (KYK kredi/burs yok)', 'KYK Bursu', 'KYK Kredisi', 'Valilik / Kaymakamlık', 'Diğer'];
+const FL = [['ad', 'Adınız – Soyadınız', 't', 1], ['tc', 'T.C. Kimlik Numaranız', 't', 1], ['dogum', 'Doğum Yeri ve Tarihiniz', 't', 1], ['adres', 'İkamet Adresiniz', 'a', 1], ['tel', 'Telefon Numaranız', 'p', 1], ['mail', 'Elektronik Posta Adresiniz', 't', 1],
+  ['okul', 'En Son Mezun Olduğunuz Okul', 't', 2], ['gecmisBurs', 'Geçmişte Burs Aldınız mı?', 'y', 2], ['fakulte', 'Kayıtlı Olduğunuz Tıp Fakültesi', 's', 2, [UNI]], ['giris', 'Tıp Fakültesi Giriş Yılınız', 's', 2, YILLAR], ['sinif', 'Sınıfınız', 's', 2, SINIF], ['okulno', 'Okul Numaranız', 'n', 2], ['gno', 'Önceki Dönem Not Ortalamanız', 'n', 2], ['dil', 'Bildiğiniz Yabancı Diller', 's', 2, DIL], ['yksTyt', 'YKS – TYT Başarı Sırası (Puan)', 'n', 2], ['yksSay', 'YKS – Sayısal (SAY) Başarı Sırası (Puan)', 'n', 2], ['yksEa', 'YKS – Eşit Ağırlık (EA) Başarı Sırası (Puan)', 'n', 2], ['yksSoz', 'YKS – Sözel (SÖZ) Başarı Sırası (Puan)', 'n', 2], ['yksDil', 'YKS – Dil Başarı Sırası (Puan)', 'n', 2], ['yerlesPuan', 'ÖSYM Yerleştirme Puanı', 'n', 2], ['yerlesSira', 'ÖSYM Yerleştirme Başarı Sırası', 'n', 2],
+  ['medeni', 'Medeni Durumunuz', 's', 3, ['Bekar', 'Evli']], ['cocuk', 'Çocuk Sayısı', 's', 3, SAYI(0, 8)], ['gelir', 'Çalışıyorsanız Aylık Geliriniz (TL)', 'n', 3], ['malvarlik', 'Taşınır – Taşınmaz Malvarlığınız', 'a', 3], ['ozelBurs', 'Burs Aldığınız Özel Kurumlar', 's', 3, OZELB], ['ozelMik', 'Aylık Burs Miktarı (özel, TL)', 'n', 3], ['kamuBurs', 'Burs Aldığınız Kamu Kurumları', 's', 3, KAMUB], ['kamuMik', 'Aylık Burs Miktarı (kamu, TL)', 'n', 3], ['tabipBurs', 'Tabip Odası’ndan Burs Aldınız mı?', 'y', 3], ['ailedeMi', 'Ailenizle mi ikamet ediyorsunuz?', 'y', 3], ['yurt', 'Yurtta Kalıyorsanız Adı – Adresi', 't', 3], ['kira', 'Evde Kalıyorsanız Kira Miktarı (TL)', 'n', 3], ['evArk', 'Varsa Ev Arkadaşı Sayısı', 's', 3, SAYI(0, 6)], ['gider', 'Aylık Giderleriniz (Ücret, Kira, Fatura vb., TL)', 'n', 3], ['engel', 'Bedensel Bir Engeliniz Var mı?', 'y', 3], ['hobi', 'Hobiler ve Özel Uğraşı Alanlarınız', 't', 3], ['dernek', 'Üye Olduğunuz Dernek Vb.', 't', 3]];
+const PF = p => [[p + '.ad', 'Adı – Soyadı', 't'], [p + '.tc', 'T.C. Kimlik No', 't'], [p + '.hayat', 'Hayatta mı?', 'y'], [p + '.adres', 'İkamet Adresi', 'a'], [p + '.meslek', 'Meslek ya da Yaptığı İş', 's', 0, MESLEK], [p + '.isyeri', 'Çalıştığı Yerin Adresi', 'a'], [p + '.gelir', 'Aylık Geliri (TL)', 'n'], [p + '.tel', 'Telefon Numarası', 'p']];
 const AYRI = ['', 'Anne ve babamla birlikte yaşıyorum', 'Annemle yaşıyorum (anne-baba ayrı)', 'Babamla yaşıyorum (anne-baba ayrı)', 'Yurtta kalıyorum', 'Kirada kalıyorum', 'Akrabamla yaşıyorum', 'Diğer'];
-const FL4 = [['bakma', 'Ailenin Bakmakla Yükümlü Olduğu Çocuklar (Ad-Soyad, Yaş, Öğrenim)', 'a'], ['aileMal', 'Ailenin Taşınır – Taşınmaz Malvarlığı', 'a'], ['aileGelir', 'Ailenin Varsa Ücret Dışı Gelirleri', 'a'], ['ayri', 'Aile Durumu (Kiminle Yaşıyorsunuz?)', 's', 4, AYRI]];
+const FL4 = [['bakma', 'Ailenin Bakmakla Yükümlü Olduğu Çocuklar (Ad-Soyad, Yaş, Öğrenim)', 'a'], ['aileMal', 'Ailenin Taşınır – Taşınmaz Malvarlığı', 'a'], ['aileGelir', 'Ailenin Varsa Ücret Dışı Gelirleri', 's', 4, ['Ücret dışı gelir yok', 'Kira geliri var', 'Tarım / hayvancılık geliri var', 'Faiz / temettü geliri var', 'Diğer']], ['ayri', 'Aile Durumu (Kiminle Yaşıyorsunuz?)', 's', 4, AYRI]];
 const ALLF = () => [...FL, ...PF('anne'), ...PF('baba'), ...FL4, ...L.Q.map(q => [q.key, q.t, q.type, q.sec, q.opts])];
 const REQF = L.REQF;
 
@@ -260,8 +266,8 @@ function vLogin() {
    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Tekirdağ Tabip Odası Tıp Bursu başvuru sistemi</p>
    </div>${termBanner(0)}
   <div class="card p-5 sm:p-7" id="lcard"><form class="space-y-4" id="lform" autocomplete="on" onsubmit="login();return false" novalidate>
-   <div><label class="lbl">Kimlik Numarası (TCKN)</label><div class="ifield"><span class="ms lead">badge</span><input id="lt" name="username" class="inp py-3" placeholder="11 haneli TCKN" inputmode="numeric" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();$('#lp').focus()}"></div></div>
-   <div><label class="lbl">Şifre</label><div class="ifield"><span class="ms lead">key</span><input id="lp" name="password" type="password" class="inp py-3 pr-11" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"><button type="button" class="eye" onclick="const p=$('#lp'),s=p.type==='password';p.type=s?'text':'password';this.innerHTML='<span class=&quot;ms&quot;>visibility'+(s?'_off':'')+'</span>'"><span class="ms">visibility</span></button></div></div>
+   <div><label class="lbl">Kimlik No (TCKN) veya Kullanıcı Adı</label><div class="ifield"><span class="ms lead">badge</span><input id="lt" name="username" value="${E(S.lt || '')}" oninput="S.lt=this.value" class="inp py-3" placeholder="TCKN / yabancı kimlik no / kullanıcı adı" inputmode="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();$('#lp').focus()}"></div></div>
+   <div><label class="lbl">Şifre</label><div class="ifield"><span class="ms lead">key</span><input id="lp" name="password" type="password" value="${E(S.lp || '')}" oninput="S.lp=this.value" class="inp py-3 pr-11" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"><button type="button" class="eye" onclick="const p=$('#lp'),s=p.type==='password';p.type=s?'text':'password';this.innerHTML='<span class=&quot;ms&quot;>visibility'+(s?'_off':'')+'</span>'"><span class="ms">visibility</span></button></div></div>
    <p id="lerr" class="text-sm text-red-600 min-h-[1.25rem]"></p><button id="lbtn" type="submit" class="btn-p w-full justify-center py-3.5 text-base rounded-xl"><span>Giriş Yap</span><span class="ms">arrow_forward</span></button>
    <p class="text-center text-sm text-gray-500">Hesabınız yok mu? <a href="#" onclick="S.mode='up';render();return false" class="text-primary-600 hover:underline font-semibold">Kayıt Olun</a></p></form></div>
   ${window.DEMO ? `  <div class="mt-4 space-y-2"><p class="text-[11px] uppercase tracking-wider text-gray-400 text-center font-semibold mb-2">Demo hesapları · dokun, otomatik dolsun</p>
@@ -342,7 +348,7 @@ function fld([k, l, t, , o]) {
   if (t === 'y') i = `<select class="inp" onchange="sf('${k}',this.value)">${opt(['Evet', 'Hayır'])}</select>`;
   else if (t === 's') i = `<select class="inp" onchange="sf('${k}',this.value)">${opt(F[k] && !o.includes(F[k]) ? [...o, F[k]] : o)}</select>`;
   else if (t === 'a') i = `<textarea rows="2" class="inp" oninput="sf('${k}',this.value)">${val(k)}</textarea>`;
-  else i = `<input class="inp" value="${val(k)}" ${/(^|\.)tc$/.test(k) ? 'inputmode="numeric" maxlength="11"' : ''} oninput="sf('${k}',this.value)">`;
+  else i = `<input class="inp" value="${val(k)}" ${/(^|\.)tc$/.test(k) ? 'maxlength="20" autocapitalize="characters"' : t === 'n' ? 'inputmode="decimal"' : t === 'p' ? 'type="tel" inputmode="tel"' : ''} oninput="sf('${k}',this.value)">`;
   return `<div id="f_${k.replace('.', '_')}"><label class="lbl">${l}${au}</label>${i}</div>`;
 }
 function sf(k, v) { F[k] = v; if (k === 'ailedeMi' && S.tab === 'form') { const y = scrollY; $('#page').innerHTML = pForm(); scrollTo(0, y); } if (F._a[k]) { delete F._a[k]; const el = document.querySelector('#f_' + k.replace('.', '_') + ' span'); if (el) el.remove(); }
