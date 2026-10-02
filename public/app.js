@@ -44,7 +44,7 @@ async function boot() {
   render();
   if (S.token) { try { const d = await api('/api/me'); setUser(d); render(); } catch (e) { if (e.status === 401 || e.status === 403) { S.token = ''; localStorage.removeItem('tto_token'); } } }
 }
-function setUser(d) { S.user = d.user; if (d.cfg) { L.setCustom(d.cfg.custom); S.term = d.cfg.term; } S.demoUser = !!d.demo; if (d.app) { A = S.app = d.app; F = A.F; F._a = F._a || {}; A.docs = (A.docs || []).filter(d => d.k === '?' || L.known(d.k)); S.tab = firstOpen(); } if (d.user.role === 'admin') loadAdmin(); }
+function setUser(d) { S.user = d.user; S.unlock = window.DEMO && d.user.role === 'student' ? 1 : S.unlock; if (d.cfg) { L.setCustom(d.cfg.custom); S.term = d.cfg.term; } S.demoUser = !!d.demo; if (d.app) { A = S.app = d.app; F = A.F; F._a = F._a || {}; A.docs = (A.docs || []).filter(d => d.k === '?' || L.known(d.k)); S.tab = firstOpen(); } if (d.user.role === 'admin') loadAdmin(); }
 let loging = false;
 async function login() {
   if (loging) return;
@@ -236,6 +236,7 @@ function render() {
   if (!S.user) Object.keys(keep).forEach(id => { const e = document.getElementById(id); if (e && !e.value && e.type !== 'file') e.value = keep[id]; });
   if (S.user && S.user.role === 'student') { renderDocs(); }
   if (S.user && S.user.role === 'admin') admTable();
+  const pb = $('#profBtn'); if (pb) pb.classList.toggle('hidden', !(S.user && S.user.role === 'student'));
   const st_ = S.user && S.user.role === 'student'; $('#bnav').classList.toggle('hidden', !st_); document.body.classList.toggle('has-bnav', !!st_);
   scrollTo(0, 0);
 }

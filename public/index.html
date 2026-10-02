@@ -2,7 +2,7 @@
 <html lang="tr"><head>
 <meta charset="UTF-8"><meta name="theme-color" content="#b4121f"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>E-Burs Portalı · Tekirdağ Tabip Odası</title>
-<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><link rel="stylesheet" href="style.css?v=18"><link rel="stylesheet" href="mdf.css?v=18"><script type="module" src="vendor/material/md.js"></script>
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><link rel="stylesheet" href="style.css?v=19"><link rel="stylesheet" href="mdf.css?v=19"><script type="module" src="vendor/material/md.js"></script>
 <script>if(localStorage.theme==='dark')document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark')</script>
 </head>
 <body class="relative bg-gray-50 text-gray-800 dark:bg-amoled-base dark:text-gray-200 min-h-screen flex flex-col font-sans">
@@ -13,7 +13,7 @@
    <img src="logo-light.png" alt="" class="dark:hidden w-11 h-11 object-contain"><img src="logo-dark.png" alt="" class="hidden dark:block w-11 h-11 object-contain">
    <div><h1 class="text-base font-bold leading-tight text-gray-900 dark:text-white">E-Burs Portalı</h1><p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Tekirdağ Tabip Odası · Tıp Bursu</p></div><span id="demoChip" class="hidden ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">DEMO</span></div>
   <div class="flex items-center gap-3 sm:gap-4">
-   <button id="helpBtn" onclick="helpOpen()" aria-label="Yardım" title="Yardım" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-amoled-hover text-gray-600 dark:text-gray-300"><span class="ms">help</span></button>
+   <button id="helpBtn" onclick="helpOpen()" aria-label="Yardım" title="Yardım" class="fixed right-4 bottom-20 md:bottom-5 z-40 w-11 h-11 rounded-full flex items-center justify-center shadow-lg bg-primary-600 text-white hover:bg-primary-700"><span class="ms">help</span></button>
    <button id="themeBtn" onclick="toggleTheme()" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-amoled-hover text-gray-600 dark:text-gray-300"><span id="themeIcon" class="ms">dark_mode</span></button>
    <div id="navUser" class="hidden items-center gap-3">
     <div class="hidden sm:flex flex-col items-end"><span id="nuName" class="text-sm font-bold text-gray-900 dark:text-white leading-none"></span><span id="nuRole" class="text-xs text-gray-500"></span></div>
@@ -26,5 +26,5 @@
 <div id="pv" class="fixed inset-0 z-[100] hidden bg-black/80 overflow-auto p-4" onclick="if(event.target===this)this.classList.add('hidden')"></div>
 <div id="tt" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-[110] hidden bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-xl"></div>
 <script src="vendor/pdf.min.js"></script><script src="vendor/tess/tesseract.min.js"></script>
-<script src="logic.js?v=18"></script><script src="seedgen.js?v=18"></script><script src="mode.js?v=18"></script><script src="demo-api.js?v=18"></script><script src="extra.js?v=18"></script><script src="app.js?v=18"></script>
+<script src="logic.js?v=19"></script><script src="seedgen.js?v=19"></script><script src="mode.js?v=19"></script><script src="demo-api.js?v=19"></script><script src="extra.js?v=19"></script><script src="app.js?v=19"></script>
 </body></html>
