@@ -3,7 +3,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
 const $ = s => document.querySelector(s);
 const E = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const { N, tcase, WN, D, SL } = L;
-const S = { user: null, token: localStorage.tto_token || '', app: null, tab: 'terms', f: { q: '', st: 'all', who: 'all', cat: 'all' }, mode: 'in', log: '', adm: { list: [], set: null, view: 'list', rows: [], q: '', st: 'all', cls: 'all', kind: 'all', res: 'all', miss: false, incMin: '', incMax: '', pcMax: '', house: 'all', car: 'all', sibMin: '', gnoMin: '', dead: false, away: false, dis: false, sort: 'rank', dir: 1, sel: null } };
+const S = { user: null, token: localStorage.tto_token || '', app: null, tab: 'terms', f: { q: '', st: 'all', who: 'all', cat: 'all' }, mode: 'in', log: '', realMode: localStorage.tto_real_mode === '1', adm: { list: [], set: null, view: 'list', rows: [], q: '', st: 'all', cls: 'all', kind: 'all', res: 'all', miss: false, incMin: '', incMax: '', pcMax: '', house: 'all', car: 'all', sibMin: '', gnoMin: '', dead: false, away: false, dis: false, sort: 'rank', dir: 1, sel: null, guide: localStorage.tto_admin_guide_seen !== '1' } };
 let F, A;
 
 const toast = m => { const t = $('#tt'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), 3200); };
@@ -35,6 +35,30 @@ const dico = { ok: 'check_circle', warn: 'warning', bad: 'cancel' };
 function toggleTheme() { const d = document.documentElement.classList.toggle('dark'); localStorage.theme = d ? 'dark' : 'light'; themeIcon(); }
 function themeIcon() { $('#themeIcon').textContent = document.documentElement.classList.contains('dark') ? 'light_mode' : 'dark_mode'; }
 function home() { render(); }
+function modeTag() { return S.realMode ? 'Normal mod' : 'Demo mod'; }
+function toggleRealMode() {
+  S.realMode = !S.realMode;
+  if (S.realMode) S.unlock = 0;
+  localStorage.tto_real_mode = S.realMode ? '1' : '0';
+  toast(S.realMode ? 'Normal mod açık: demo kolaylıkları kapatıldı' : 'Demo mod açık: demo kolaylıkları aktif');
+  render();
+}
+function logoTapModeToggle() {
+  clearTimeout(logoTapModeToggle.tm);
+  logoTapModeToggle.n = (logoTapModeToggle.n || 0) + 1;
+  logoTapModeToggle.tm = setTimeout(() => logoTapModeToggle.n = 0, 8000);
+  if (logoTapModeToggle.n >= 10) { logoTapModeToggle.n = 0; toggleRealMode(); }
+}
+function openHelp(kind) {
+  const pv = $('#pv');
+  const h = kind === 'admin'
+    ? '<h3 class="text-lg font-bold mb-2">Yönetim paneli yardım</h3><ul class="space-y-1 text-sm list-disc pl-5"><li><b>Başvurular</b>: tüm kayıtları filtreleyip inceleyebilirsiniz.</li><li><b>Şartlar ve Puanlama</b>: eleme koşulları, puanlama ve kontenjan ayarlanır.</li><li><b>İncele</b>: tek başvuruda belgeler, OCR metni ve not yönetimi yapılır.</li><li><b>Dışa Aktarım</b>: üstteki Excel/CSV düğmeleriyle liste indirilebilir.</li></ul>'
+    : '<h3 class="text-lg font-bold mb-2">Giriş ekranı yardım</h3><ul class="space-y-1 text-sm list-disc pl-5"><li>Şu an: <b>' + modeTag() + '</b>.</li><li>Tekirdağ Tabip Odası logosuna 10 kez basınca demo/normal mod arasında geçiş olur.</li><li>Demo modda kolay test için demo hesap kartları ve hızlı doldurma açık olur.</li><li>Normal modda demo kolaylıkları gizlenir.</li></ul>';
+  pv.innerHTML = `<div class="max-w-xl mx-auto bg-white dark:bg-amoled-surface rounded-xl p-5 mt-10 shadow-xl" onclick="event.stopPropagation()">${h}<div class="mt-4 text-right"><button class="btn-p" onclick="closeHelp()">Tamam</button></div></div>`;
+  pv.classList.remove('hidden');
+}
+function closeHelp() { $('#pv').classList.add('hidden'); }
+function dismissAdminGuide() { S.adm.guide = false; localStorage.tto_admin_guide_seen = '1'; render(); }
 async function logout() { try { await flushSave(); await api('/api/logout', { method: 'POST' }); } catch (e) {} S.user = null; S.unlock = 0; S.token = ''; A = F = null; localStorage.removeItem('tto_token'); S.mode = 'in'; render(); }
 async function boot() {
   themeIcon();
@@ -238,18 +262,18 @@ function render() {
 }
 function vLogin() {
   return `<div class="w-full max-w-md mx-auto my-4 sm:my-10"><div class="stg">
-  <div class="text-center mb-6"><img src="logo-light.png" alt="Tekirdağ Tabip Odası" class="hero-logo dark:hidden"><img src="logo-dark.png" alt="Tekirdağ Tabip Odası" class="hero-logo hidden dark:block">
+  <div class="text-center mb-6 relative"><button class="btn !absolute right-0 -top-1 !px-2 !py-1" onclick="openHelp('login')" aria-label="Yardım"><span class="ms">help</span></button><img src="logo-light.png" alt="Tekirdağ Tabip Odası" class="hero-logo dark:hidden cursor-pointer" onclick="logoTapModeToggle()"><img src="logo-dark.png" alt="Tekirdağ Tabip Odası" class="hero-logo hidden dark:block cursor-pointer" onclick="logoTapModeToggle()">
    <h2 class="text-3xl font-bold tracking-tight"><span class="grad-t">E-Burs Portalı</span></h2>
-   <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Tekirdağ Tabip Odası Tıp Bursu başvuru sistemi</p>
+   <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Tekirdağ Tabip Odası Tıp Bursu başvuru sistemi · ${modeTag()}</p>
    </div>
   <div class="card p-5 sm:p-7" id="lcard"><form class="space-y-4" id="lform" autocomplete="on" onsubmit="login();return false" novalidate>
    <div><label class="lbl">Kimlik Numarası (TCKN)</label><div class="ifield"><span class="ms lead">badge</span><input id="lt" name="username" class="inp py-3" placeholder="11 haneli TCKN" inputmode="numeric" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();$('#lp').focus()}"></div></div>
    <div><label class="lbl">Şifre</label><div class="ifield"><span class="ms lead">key</span><input id="lp" name="password" type="password" class="inp py-3 pr-11" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"><button type="button" class="eye" onclick="const p=$('#lp'),s=p.type==='password';p.type=s?'text':'password';this.innerHTML='<span class=&quot;ms&quot;>visibility'+(s?'_off':'')+'</span>'"><span class="ms">visibility</span></button></div></div>
    <p id="lerr" class="text-sm text-red-600 min-h-[1.25rem]"></p><button id="lbtn" type="submit" class="btn-p w-full justify-center py-3.5 text-base rounded-xl"><span>Giriş Yap</span><span class="ms">arrow_forward</span></button>
    <p class="text-center text-sm text-gray-500">Hesabınız yok mu? <a href="#" onclick="S.mode='up';render();return false" class="text-primary-600 hover:underline font-semibold">Kayıt Olun</a></p></form></div>
-  <div class="mt-4 space-y-2"><p class="text-[11px] uppercase tracking-wider text-gray-400 text-center font-semibold mb-2">Demo hesapları · dokun, otomatik dolsun</p>
+  ${S.realMode ? '' : `<div class="mt-4 space-y-2"><p class="text-[11px] uppercase tracking-wider text-gray-400 text-center font-semibold mb-2">Demo hesapları · dokun, otomatik dolsun</p>
    <button type="button" class="demo-btn" onclick="$('#lt').value='admin';$('#lp').value='123'"><span class="w-8 h-8 rounded-lg bg-red-500/15 text-red-500 flex items-center justify-center"><span class="ms">admin_panel_settings</span></span><span><b class="block text-sm">Yönetici</b><span class="text-gray-500">admin · 123</span></span></button>
-   <button type="button" class="demo-btn" onclick="$('#lt').value='12345678901';$('#lp').value='123'"><span class="w-8 h-8 rounded-lg bg-green-500/15 text-green-600 flex items-center justify-center"><span class="ms">school</span></span><span><b class="block text-sm">Öğrenci</b><span class="text-gray-500">12345678901 · 123 (hesap otomatik açılır)</span></span></button></div>
+   <button type="button" class="demo-btn" onclick="$('#lt').value='12345678901';$('#lp').value='123'"><span class="w-8 h-8 rounded-lg bg-green-500/15 text-green-600 flex items-center justify-center"><span class="ms">school</span></span><span><b class="block text-sm">Öğrenci</b><span class="text-gray-500">12345678901 · 123 (hesap otomatik açılır)</span></span></button></div>`}
   </div></div>`;
 }
 function vRegister() {
@@ -289,7 +313,7 @@ function sidebar() {
   requestAnimationFrame(() => requestAnimationFrame(() => { const r = document.querySelector('.ringc'); if (r) r.style.strokeDashoffset = r.dataset.off; })); countUp(); stepper();
 }
 function go(t, tap) {
-  if (tap && t === 'docs' && (window.IS_DEMO || S.tapOk)) { clearTimeout(go.tm); go.n = (go.n || 0) + 1; go.tm = setTimeout(() => go.n = 0, 6000); if (go.n >= 10) { go.n = 0; S.unlock = 1; A.terms = 1; save(); t = 'form'; toast('Demo: tüm adımlar açıldı → başvuru formu'); } }
+  if (!S.realMode && tap && t === 'docs' && (window.IS_DEMO || S.tapOk)) { clearTimeout(go.tm); go.n = (go.n || 0) + 1; go.tm = setTimeout(() => go.n = 0, 6000); if (go.n >= 10) { go.n = 0; S.unlock = 1; A.terms = 1; save(); t = 'form'; toast('Demo: tüm adımlar açıldı → başvuru formu'); } }
   if (L.steps(F, A.docs, A.terms)[1].ok && t === 'docs') { L.refresh(F, A.docs); save(); }
   const g = gateOf(t); if (g) { toast(g.why); t = ORDER[g.j]; }
   S.tab = t; sidebar(); $('#page').innerHTML = { terms: pTerms, id: pId, docs: pDocs, form: pForm, sum: pSum }[t](); if (t === 'docs') renderDocs(); stepper(); scrollTo(0, 0);
@@ -356,7 +380,7 @@ function pForm() {
   const par = (p, t) => { return F[p + '.hayat'] === 'Hayır' ? '' : h('IV – Aileye İlişkin Bilgiler · ' + t) + g(PF(p).slice(3).map(fq).join('')); };
   return `<div class="card p-5 sm:p-6 fade-in"><div class="flex flex-wrap items-start justify-between gap-2"><div><h2 class="text-lg font-bold text-gray-900 dark:text-white"><span class="ms text-primary-500 mr-2">quiz</span>Başvuru Formu</h2>
   <p class="text-xs text-gray-500 mt-1">Belgelerden okunan bilgiler otomatik doldurulur; eksik kalanları tamamlayın. <span class="req">*</span> zorunlu.</p></div>
-  ${window.IS_DEMO || S.unlock ? '<button class="btn" onclick="demoFill()"><span class="ms">auto_fix_high</span> Demo verisiyle doldur</button>' : ''}</div>
+  ${!S.realMode && (window.IS_DEMO || S.unlock) ? '<button class="btn" onclick="demoFill()"><span class="ms">auto_fix_high</span> Demo verisiyle doldur</button>' : ''}</div>
   ${h(SEC[1])}${sec(1)}${h(SEC[2])}${sec(2)}${h(SEC[3])}${sec(3)}${par('anne', 'Anne')}${par('baba', 'Baba')}${h('IV – Aileye İlişkin Bilgiler · Aile')}${g(FL4.map(fq).join(''))}
   <div class="mt-6 flex flex-wrap gap-2 items-center"><button class="btn-p" data-nxt="sum" onclick="go('sum')">Özete geç <span class="ms">arrow_forward</span></button><span id="gh" class="gh"></span></div></div>`;
 }
@@ -428,7 +452,7 @@ function pSum() {
 }
 async function submitApp() {
   const st = L.steps(F, A.docs, A.terms).find(x => !x.ok); if (st && !S.unlock) return toast(st.why);
-  try { dirty = true; await flushSave(); const d = await api('/api/submit' + (st ? '?force=1' : ''), { method: 'POST' }); A.status = d.status; A.sent = Date.now(); toast('Başvuru gönderildi'); confetti(); go('sum'); } catch (e) { toast(e.message); }
+  try { dirty = true; await flushSave(); const d = await api('/api/submit' + (!S.realMode && st ? '?force=1' : ''), { method: 'POST' }); A.status = d.status; A.sent = Date.now(); toast('Başvuru gönderildi'); confetti(); go('sum'); } catch (e) { toast(e.message); }
 }
 const AS = { Burs: 'Onaylandı', Yedek: 'Beklemede', Elendi: 'Reddedildi' }, TL = n => Math.round(n || 0).toLocaleString('tr-TR') + ' ₺';
 setInterval(async () => { if (S.user && S.user.role === 'admin' && !document.hidden && !($('#adet') || {}).innerHTML) { try { S.adm.list = (await api('/api/admin/apps')).apps; admTable(); } catch (e) {} } }, 10000);
@@ -444,7 +468,8 @@ function admReset() { Object.assign(S.adm, { q: '', st: 'all', cls: 'all', kind:
 function vAdmin() {
   const A_ = S.adm, rk = admRank(), demo = A_.list.filter(a => a.demo).length, card = (ic, c, l, v) => `<div class="card p-4 flex items-center gap-4"><div class="w-10 h-10 rounded-full ${c} flex items-center justify-center"><span class="ms">${ic}</span></div><div><p class="text-xs text-gray-500">${l}</p><p class="text-xl font-bold dark:text-white" data-count="${v}">0</p></div></div>`;
   const n = f => rk.filter(f).length;
-  return `<div class="fade-in mdf"><div class="mb-5 flex flex-col md:flex-row md:items-end justify-between gap-4"><div><h2 class="text-2xl font-bold text-gray-900 dark:text-white">Yönetim Paneli</h2><p class="text-sm text-gray-500 mt-1">${A_.list.length} başvuru${demo ? ' · ' + demo + ' demo kayıt' : ''} · burs kontenjanı ${A_.set.quota}</p></div>
+  const guide = A_.guide ? `<div class="card p-4 mb-4 border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-900/10"><div class="flex items-start justify-between gap-2"><div><h3 class="font-bold text-sm text-blue-800 dark:text-blue-300">Yönetim paneli ilk kullanım özeti</h3><ul class="text-xs mt-2 space-y-1 text-blue-900 dark:text-blue-200"><li>• <b>Başvurular</b> görünümünde filtre, sıralama, inceleme ve durum değişikliği yapabilirsiniz.</li><li>• Her öğrenci kartındaki <b>İncele</b> ile belgeleri, OCR metnini, notu ve başvuru durumunu yönetebilirsiniz.</li><li>• <b>Şartlar ve Puanlama</b> bölümünde eleme kuralları, puan ağırlıkları ve kontenjanı belirlersiniz.</li><li>• Üst menüden Excel/CSV dışa aktarım alabilir, örnek veri oluşturabilir ve demo kayıtları temizleyebilirsiniz.</li></ul></div><button class="btn !px-2 !py-1 shrink-0" onclick="dismissAdminGuide()"><span class="ms">close</span></button></div></div>` : '';
+  return `<div class="fade-in mdf">${guide}<div class="mb-5 flex flex-col md:flex-row md:items-end justify-between gap-4"><div><h2 class="text-2xl font-bold text-gray-900 dark:text-white">Yönetim Paneli <button class="btn !px-2 !py-1 align-middle" onclick="openHelp('admin')" aria-label="Yardım"><span class="ms">help</span></button></h2><p class="text-sm text-gray-500 mt-1">${A_.list.length} başvuru${demo ? ' · ' + demo + ' demo kayıt' : ''} · burs kontenjanı ${A_.set.quota}</p></div>
    <div class="flex flex-wrap gap-2"><button class="btn" onclick="loadAdmin()"><span class="ms">refresh</span> Yenile</button><div class="xsp"><button class="btn" onclick="exportX('xlsx')"><span class="ms">table_view</span> Excel</button><button class="btn xarr" onclick="xmenu(event)" aria-label="Dışa aktarma türü"><span class="ms">arrow_drop_down</span></button><div id="xmenu" class="xmenu hidden"><button onclick="exportX('xlsx')"><span class="ms">table_view</span> Excel (.xlsx)</button><button onclick="exportX('csv')"><span class="ms">csv</span> CSV (.csv)</button></div></div><button class="btn text-red-600" onclick="admWipe()"><span class="ms">delete_forever</span> Tüm verileri sil</button><button class="btn" onclick="admSeed()"><span class="ms">science</span> Örnek veri</button>${demo ? `<button class="btn text-red-600" onclick="admDemoDel()"><span class="ms">cleaning_services</span> Demo sil</button>` : ''}</div></div>
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">${card('group', 'bg-blue-50 dark:bg-blue-900/20 text-blue-600', 'Toplam', rk.length)}${card('schedule', 'bg-orange-50 dark:bg-orange-900/20 text-orange-600', 'İncelenecek', n(r => r.a.status === 'Beklemede'))}${card('emoji_events', 'bg-green-50 dark:bg-green-900/20 text-green-600', 'Burs alacak (kural)', n(r => r.res === 'Burs'))}${card('block', 'bg-red-50 dark:bg-red-900/20 text-red-600', 'Elenen (kural)', n(r => r.res === 'Elendi'))}</div>
   <div class="flex gap-2 mb-4"><span class="chip ${A_.view === 'list' ? 'on' : ''}" onclick="S.adm.view='list';$('#app').innerHTML=vAdmin();admTable()"><span class="ms mr-1">table_rows</span>Başvurular</span><span class="chip ${A_.view === 'set' ? 'on' : ''}" onclick="S.adm.view='set';$('#app').innerHTML=vAdmin()"><span class="ms mr-1">tune</span>Şartlar ve Puanlama</span></div>

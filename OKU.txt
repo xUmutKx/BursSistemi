@@ -16,6 +16,7 @@ GITHUB PAGES (sunucusuz demo, veriler tarayıcıda)
   Adres: https://KULLANICI.github.io/BursSistemi/
 
 Demo giriş: yönetici admin / 123 (sabit, değiştirilemez)  |  öğrenci: herhangi 11 haneli TCKN / 123
+Giriş logosuna 10 kez basarak Demo Mod ve Normal Mod arasında geçiş yapabilirsiniz (mod seçimi tarayıcıda saklanır).
 
 Öğrenci akışı: Şartlar > Kimlik (ad-soyad, T.C., sınıf, anne, baba) > Belgeler > Başvuru Formu (belgelerden otomatik dolar) > Özet/Gönder
 - Başvuru Formu: Word formundaki tüm sorular (kimlik, iletişim, eğitim, ekonomik durum, anne/baba, aile) belgelerden ÖNCE sorulur. Ad yazılırken son kelime soyad sayılır; yalnız ad yazılırsa öğrencinin soyadı kullanılır. Belgeler yüklenince yazdığınız cevapların üzerine yazılmaz.
@@ -38,3 +39,6 @@ v7 NOTLARI
 - YKS: TYT/SAY/EA/SÖZ/DİL başarı sırası + yerleştirme puanı/sırası forma ve yönetici paneli/Excel'e eklendi.
 - Her yüklemeden hemen sonra başvuru kaydedilir; yönetici paneli 10 sn'de bir kendini yeniler. Demo verisi artık IndexedDB'de (kota dolmaz).
 - v8: Giriş ekranı düzeltildi: alanlar form içinde (tarayıcı otomatik doldurma/Enter uyumlu), açılıştaki oturum kontrolü yazılanları silmiyor, hatada TC/şifre kalıyor ve hata mesajı kutunun içinde görünüyor.
+- v9: Giriş ekranında logo ile 10 tıkla demo/normal mod geçişi eklendi; normal modda demo kolaylıkları gizlenir.
+- v9: Yönetim paneline ilk açılışta kullanım rehberi ve yardım (soru işareti) eklendi.
+- v9: Sunucuya ek güvenlik başlıkları ve temel istek hız sınırı eklendi.

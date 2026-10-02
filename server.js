@@ -35,18 +35,37 @@ function seed(n) {
 }
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.pdf': 'application/pdf', '.svg': 'image/svg+xml', '.traineddata': 'application/octet-stream', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
-const send = (res, code, obj) => { const b = Buffer.from(JSON.stringify(obj)); res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': b.length, 'Cache-Control': 'no-store' }); res.end(b); };
+const SEC = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+};
+const withSec = h => Object.assign({}, SEC, h);
+const send = (res, code, obj) => { const b = Buffer.from(JSON.stringify(obj)); res.writeHead(code, withSec({ 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': b.length, 'Cache-Control': 'no-store' })); res.end(b); };
 const body = (req, max) => new Promise((ok, no) => { const c = []; let n = 0; req.on('data', d => { n += d.length; if (n > max) { no(new Error('Dosya çok büyük')); req.destroy(); } else c.push(d); }); req.on('end', () => ok(Buffer.concat(c))); req.on('error', no); });
 const json = async (req, max = 60e6) => { const b = await body(req, max); try { return JSON.parse(b.toString('utf8') || '{}'); } catch (e) { throw new Error('Geçersiz istek'); } };
 const auth = (req, url) => { const t = (req.headers.authorization || '').replace(/^Bearer /, '') || url.searchParams.get('t'); const s = t && db.sessions[t]; if (!s || s.exp < Date.now()) return null; const u = db.users[s.tc]; return u ? { u, t } : null; };
 const safe = s => String(s || 'dosya').replace(/[^\w.\-çğıöşüÇĞİÖŞÜ ]/g, '_').slice(-80);
 const clean = d => ({ ...d });
 const adminView = (a, uid) => { const us = db.users[uid] || {}; return { ...a, uid, demo: !!us.demo, acc: { user: uid, mail: us.email || a.F.mail || '', pw: us.pt || '' }, docs: (a.docs || []).map(d => { const { text, ...r } = d; return r; }) }; };
+const RL = new Map();
+const rlim = (req, key, lim, winMs) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0';
+  const k = key + '|' + ip, now = Date.now(), x = RL.get(k);
+  if (!x || x.reset <= now) { RL.set(k, { n: 1, reset: now + winMs }); return false; }
+  if (x.n >= lim) return true;
+  x.n++;
+  return false;
+};
 
 async function api(req, res, url) {
   const p = url.pathname, m = req.method;
   try {
+    if (rlim(req, 'api', 500, 60e3)) return send(res, 429, { error: 'Çok fazla istek. Lütfen kısa süre sonra tekrar deneyin.' });
     if (p === '/api/login' && m === 'POST') {
+      if (rlim(req, 'login', 20, 60e3)) return send(res, 429, { error: 'Çok fazla giriş denemesi. Lütfen 1 dakika bekleyin.' });
       const { tc, pw } = await json(req); const id = String(tc || '').trim().toLowerCase();
       if (!id || !pw) return send(res, 400, { error: 'TCKN ve şifre girin' });
       let u = db.users[id];
@@ -58,6 +77,7 @@ async function api(req, res, url) {
       return send(res, 200, { token: t, user: { tc: u.tc, name: u.name, role: u.role } });
     }
     if (p === '/api/register' && m === 'POST') {
+      if (rlim(req, 'register', 10, 60e3)) return send(res, 429, { error: 'Kayıt denemesi sınırına ulaşıldı. Lütfen sonra tekrar deneyin.' });
       const b = await json(req), id = String(b.tc || '').trim();
       if (!/^\d{11}$/.test(id)) return send(res, 400, { error: 'TCKN 11 haneli olmalı' });
       if (!b.name || String(b.name).trim().length < 3) return send(res, 400, { error: 'Ad soyad girin' });
@@ -73,7 +93,7 @@ async function api(req, res, url) {
       const [, , , tc, f] = p.split('/'); if (!s || (s.u.role !== 'admin' && s.u.tc !== tc)) return send(res, 403, { error: 'Yetkisiz' });
       const fp = path.join(UP, path.basename(tc), path.basename(decodeURIComponent(f || '')));
       if (!fp.startsWith(UP) || !fs.existsSync(fp)) return send(res, 404, { error: 'Yok' });
-      res.writeHead(200, { 'Content-Type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'private, max-age=3600' });
+      res.writeHead(200, withSec({ 'Content-Type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'private, max-age=3600' }));
       return fs.createReadStream(fp).pipe(res);
     }
     if (!s) return send(res, 401, { error: 'Oturum süresi doldu' });
@@ -94,6 +114,7 @@ async function api(req, res, url) {
         a.updated = Date.now(); persist(); return send(res, 200, { ok: true, name: u.name });
       }
       if (p === '/api/upload' && m === 'POST') {
+        if (rlim(req, 'upload', 180, 10 * 60e3)) return send(res, 429, { error: 'Çok fazla dosya yükleme isteği. Lütfen biraz bekleyin.' });
         const buf = await body(req, 30e6), nm = safe(url.searchParams.get('name')), ext = path.extname(nm).toLowerCase().slice(0, 8) || '.bin';
         const dir = path.join(UP, u.tc); fs.mkdirSync(dir, { recursive: true });
         const fn = Date.now().toString(36) + crypto.randomBytes(3).toString('hex') + ext; fs.writeFileSync(path.join(dir, fn), buf);
@@ -125,7 +146,7 @@ http.createServer((req, res) => {
   let f = decodeURIComponent(url.pathname); if (f === '/') f = '/index.html';
   const fp = path.normalize(path.join(PUB, f));
   if (!fp.startsWith(PUB) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); return res.end('404'); }
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream', 'Cache-Control': /vendor/.test(f) ? 'public, max-age=86400' : 'no-cache' });
+  res.writeHead(200, withSec({ 'Content-Type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream', 'Cache-Control': /vendor/.test(f) ? 'public, max-age=86400' : 'no-cache' }));
   fs.createReadStream(fp).pipe(res);
 }).listen(PORT, '0.0.0.0', () => {
   console.log('\n  Burs Sistemi çalışıyor\n');
