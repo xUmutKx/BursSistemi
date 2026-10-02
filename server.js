@@ -136,15 +136,15 @@ async function api(req, res, url) {
     }
     if (p === '/api/register' && m === 'POST') {
       if (!bucket('r:' + ip, 12, 36e5, 36e5)) return send(res, 429, { error: 'Çok fazla kayıt denemesi – daha sonra tekrar deneyin' });
-      const b = await json(req, 2e4), id = String(b.tc || '').trim(), demoOk = mode === 'demo';
-      if (!/^\d{11}$/.test(id)) return send(res, 400, { error: 'TCKN 11 haneli olmalı' });
+      const b = await json(req, 2e4), id = String(b.tc || '').trim().toLowerCase(), demoOk = mode === 'demo';
+      const foreign = !!b.foreign; if (foreign ? !/^[A-Za-z0-9]{5,20}$/.test(id) : !/^\d{11}$/.test(id)) return send(res, 400, { error: foreign ? 'Yabancı kimlik / pasaport no 5-20 harf-rakam olmalı' : 'TCKN 11 haneli olmalı' });
       if (!b.name || String(b.name).trim().length < 3) return send(res, 400, { error: 'Ad soyad girin' });
       if (!b.pw || String(b.pw).length < (demoOk ? 3 : 8)) return send(res, 400, { error: 'Şifre en az ' + (demoOk ? 3 : 8) + ' karakter olmalı' });
       if (String(b.uni || '').trim() !== UNI) return send(res, 400, { error: 'Yalnızca ' + UNI + ' öğrencileri başvurabilir' });
       const em = String(b.email || '').trim().toLowerCase(); if (!mailer.MAIL_RE.test(em)) return send(res, 400, { error: 'Geçerli bir e-posta adresi girin' });
       if (!okCode(em, b.code)) return send(res, 400, { error: 'E-posta doğrulama kodu hatalı veya süresi dolmuş' });
       const old = db.users[id]; if (old && !old.demo) return send(res, 409, { error: 'Bu TCKN zaten kayıtlı' });
-      const u = db.users[id] = mkUser(id, String(b.name).trim().slice(0, 80), String(b.pw).slice(0, 100), 'student', { demo: demoOk, email: em.slice(0, 100), tel: String(b.tel || '').slice(0, 30), uni: UNI });
+      const u = db.users[id] = mkUser(id, String(b.name).trim().slice(0, 80), String(b.pw).slice(0, 100), 'student', { demo: demoOk, foreign: !!b.foreign, email: em.slice(0, 100), tel: String(b.tel || '').slice(0, 30), uni: UNI });
       const a = db.apps[id] = db.apps[id] || newApp(u); a.F.ad = u.name; a.F.mail = a.F.mail || u.email; a.F.tel = a.F.tel || u.tel; if (u.uni && !a.F.fakulte) a.F.fakulte = u.uni; persist();
       return send(res, 200, { ok: true });
     }

@@ -94,7 +94,7 @@
     const giv = toks.length > 1 ? toks.slice(0, -1) : toks;
     return giv.some(hit) || (toks.length > 1 && hit(toks[toks.length - 1]) && giv.every(t => t.length < 3));
   };
-  const hasTc = (U, tc) => !!tc && new RegExp('(^|\\D)' + tc + '(\\D|$)').test(U);
+  const hasTc = (U, tc) => !!tc && new RegExp('(^|[^A-Za-z0-9])' + String(tc).replace(/[^A-Za-z0-9]/g, '') + '([^A-Za-z0-9]|$)', 'i').test(U);
   L.ownerOf = (U, F, allowed, src) => {
     const p = L.people(F), head = src === 'img' ? U : U.slice(0, 4000), al = allowed || 'smf';
     for (const t of head.match(/\b\d{11}\b/g) || []) for (const w of 'smf') if (al.includes(w) && p[w].tc && p[w].tc === t) return w;
@@ -113,14 +113,14 @@
     const p = L.people(F), head = src === 'img' ? U : U.slice(0, 4000), ck = [];
     if (k === 'foto') return ck;
     const has = x => hasTc(head, p[x].tc) ? 'T.C. no' : L.nameHit(head, p[x].n) ? 'isim' : (L.givenHit(head, p[x].n) ? 'ad' : '');
-    const nm = { s: F.ad, m: F['anne.ad'], f: F['baba.ad'] }, lab = x => WN_[x] + (p[x].n ? ' (' + String(nm[x] || '').trim() + ')' : ''), bad = m => ck.push({ t: 'bad', m }), ok = m => ck.push({ t: 'ok', m });
+    const nm = { s: F.ad, m: F['anne.ad'], f: F['baba.ad'] }, lab = x => WN_[x] + (p[x].n ? ' (' + String(nm[x] || '').trim() + ')' : ''), bad = m => ck.push({ t: 'bad', m }), warn = m => ck.push({ t: 'warn', m }), ok = m => ck.push({ t: 'ok', m });
     if (k === 'kimlik_ar') {
       if (has('s')) ok('Öğrenci kimliği doğrulandı (' + has('s') + ')');
       else if (['m', 'f'].some(x => p[x].f && new RegExp('\\b' + p[x].f + '\\b').test(head))) ok('Anne/baba adı kimlikle eşleşti');
-      else bad('Kimliğin arka yüzünde anne/baba adı okunamadı – öğrenciye ait olduğu doğrulanamadı. Net/tam fotoğraf yükleyin');
+      else warn('Kimliğin arka yüzünde anne/baba adı otomatik okunamadı – belge kaydedildi, yönetici ayrıca kontrol eder');
       return ck;
     }
-    if (k === 'kira_aile' || (w === 'a' && k !== 'nufus' && isCustom(k))) { const x = 'smf'.split('').find(has); x ? ok(lab(x) + ' adı doğrulandı') : bad((k === 'kira_aile' ? 'Kira kontratında' : 'Belgede') + ' öğrenci/anne/baba adı görünmüyor – kabul edilmez'); return ck; }
+    if (k === 'kira_aile' || (w === 'a' && k !== 'nufus' && isCustom(k))) { const x = 'smf'.split('').find(has); x ? ok(lab(x) + ' adı doğrulandı') : warn((k === 'kira_aile' ? 'Kira kontratında' : 'Belgede') + ' öğrenci/anne/baba adı otomatik doğrulanamadı – belge kaydedildi, yönetici ayrıca kontrol eder'); return ck; }
     const need = k === 'nufus' ? 's' : w;
     if (!'smf'.includes(need)) return ck;
     if (!p[need].n) { bad(WN_[need] + ' adı “Kimlik” adımında girilmemiş'); return ck; }
@@ -131,7 +131,8 @@
       if (p[need].tc && ids.length && !ids.includes(p[need].tc) && ids.some(t => 'smf'.split('').some(x => x !== need && p[x].tc === t))) bad('Belgedeki T.C. no ' + WN_[need] + ' ile uyuşmuyor');
     } else {
       const o = 'smf'.split('').find(x => x !== need && has(x));
-      bad(o ? 'Bu belge ' + lab(o) + ' adına görünüyor; ' + WN_[need] + ' adına olmalı' : lab(need) + ' adı belgede görünmüyor – ekran görüntüsünde ad kırpılmış olabilir; adı görünmeyen belge kabul edilmez');
+      if (o) bad('Bu belge ' + lab(o) + ' adına görünüyor; ' + WN_[need] + ' adına olmalı');
+      else warn(lab(need) + ' adı belgede otomatik doğrulanamadı (ekran görüntüsünde ad kırpılmış olabilir) – belge kaydedildi, yönetici ayrıca kontrol eder');
     }
     return ck;
   };
@@ -343,10 +344,10 @@
 
   const REQ0 = ['ad', 'tc', 'dogum', 'adres', 'tel', 'mail', 'okul', 'gecmisBurs', 'fakulte', 'giris', 'sinif', 'okulno', 'gno', 'medeni', 'tabipBurs', 'ailedeMi', 'engel'];
   L.REQF = REQ0.slice();
-  L.idMiss = F => { const nt = s => (s || '').trim().split(/\s+/).filter(x => x.length > 1).length, tcok = s => /^\d{11}$/.test((s || '').trim()), m = [];
-    if (nt(F.ad) < 2) m.push('öğrenci adı-soyadı'); if (!tcok(F.tc)) m.push('öğrenci T.C. kimlik no'); if (!F.sinif) m.push('sınıf');
-    if (nt(F['anne.ad']) < 1) m.push('anne adı'); if (!tcok(F['anne.tc'])) m.push('anne T.C. kimlik no'); if (!F['anne.hayat']) m.push('anne hayatta mı');
-    if (nt(F['baba.ad']) < 1) m.push('baba adı'); if (!tcok(F['baba.tc'])) m.push('baba T.C. kimlik no'); if (!F['baba.hayat']) m.push('baba hayatta mı'); return m; };
+  L.idMiss = F => { const nt = s => (s || '').trim().split(/\s+/).filter(x => x.length > 1).length, tcok = s => /^\d{11}$/.test((s || '').trim()) || /^[A-Za-z0-9]{5,20}$/.test((s || '').trim()), m = [];
+    if (nt(F.ad) < 2) m.push('öğrenci adı-soyadı'); if (!tcok(F.tc)) m.push('öğrenci T.C. / yabancı kimlik no'); if (!F.sinif) m.push('sınıf');
+    if (nt(F['anne.ad']) < 1) m.push('anne adı'); if (!tcok(F['anne.tc'])) m.push('anne T.C. / yabancı kimlik no'); if (!F['anne.hayat']) m.push('anne hayatta mı');
+    if (nt(F['baba.ad']) < 1) m.push('baba adı'); if (!tcok(F['baba.tc'])) m.push('baba T.C. / yabancı kimlik no'); if (!F['baba.hayat']) m.push('baba hayatta mı'); return m; };
   L.steps = (F, docs, terms) => {
     const pr = L.progress(F, docs), im = L.idMiss(F), bad = docs.filter(d => L.dstat(d) === 'bad').length, fm = L.REQF.filter(k => !['ad', 'tc', 'sinif'].includes(k) && !String(F[k] || '').trim());
     return [

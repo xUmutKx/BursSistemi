@@ -2108,3 +2108,13 @@ details>summary{list-style:none}details>summary::-webkit-details-marker{display:
   nav .justify-between>div:last-child{flex-shrink:0;gap:.25rem}
   #profBtn,nav button[onclick="logout()"]{padding:.375rem .5rem}
 }
+
+#upq{position:fixed;top:4.5rem;right:.75rem;z-index:130;display:flex;flex-direction:column;gap:.5rem;width:min(22rem,calc(100vw - 1.5rem));pointer-events:none}
+.upp{display:flex;gap:.6rem;align-items:flex-start;padding:.6rem .8rem;border-radius:.75rem;background:#fff;color:#1f2937;border:1px solid #e5e7eb;box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:.8rem;transition:opacity .4s,transform .4s;animation:uppin .25s}
+.upp b{display:block;font-size:.8rem;word-break:break-all}
+.upp.ok{border-color:#86efac}.upp.ok .ms{color:#16a34a}
+.upp.warn{border-color:#fdba74}.upp.warn .ms{color:#ea580c}
+.upp.bad{border-color:#fca5a5}.upp.bad .ms{color:#dc2626}
+.upp.out{opacity:0;transform:translateX(1rem)}
+html.dark .upp{background:#111;color:#e5e7eb;border-color:#2a2a2a}
+@keyframes uppin{from{opacity:0;transform:translateX(1rem)}to{opacity:1;transform:none}}

@@ -63,8 +63,9 @@ async function login() {
   }
   finally { loging = false; }
 }
+function foreignToggle(f) { const t = $('#rt'); $('#rtl').textContent = f ? 'Yabancı Kimlik No / Pasaport No' : 'T.C. Kimlik No'; t.maxLength = f ? 20 : 11; t.inputMode = f ? 'text' : 'numeric'; t.placeholder = f ? 'Yabancı kimlik veya pasaport numarası' : ''; }
 async function register() {
-  const v = id => $(id).value.trim(), b = { tc: v('#rt'), name: v('#rn'), email: v('#re'), tel: v('#rtel'), uni: v('#ru'), code: v('#rk'), pw: $('#rp').value };
+  const v = id => $(id).value.trim(), b = { tc: v('#rt'), name: v('#rn'), email: v('#re'), tel: v('#rtel'), uni: v('#ru'), code: v('#rk'), foreign: $('#rfor').checked, pw: $('#rp').value };
   if (b.pw !== $('#rp2').value) return toast('Şifreler uyuşmuyor');
   try { await api('/api/register', { method: 'POST', json: b }); toast('Kayıt tamamlandı'); S.mode = 'in'; render(); $('#lt').value = b.tc; $('#lp').value = b.pw; login(); }
   catch (e) { toast(e.message); }
@@ -163,7 +164,11 @@ function mergeInto(ex, d) {
   ex.ck = m.ck; ex.info = m.info; L.apply(F, m.patches);
   ex.extra = (ex.extra || []).concat([{ name: d.name, file: d.file }]);
 }
-async function one({ f, slot }) {
+async function one(job) {
+  const pp = upPop(job.f.name);
+  try { await one0(job, pp); pp.end('ok', 'Yüklendi ve kaydedildi'); } catch (e) { pp.end('bad', 'Yüklenemedi: ' + (e.message || 'hata')); throw e; }
+}
+async function one0({ f, slot }, pp) {
   const s = slot && SL.find(x => x.id === slot);
   const up0 = api('/api/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' } }); up0.catch(() => {});
   const r = await (s && (s.k === 'foto' || (s.custom && s.ocr && s.ocr.off)) ? thumbOnly(f) : readFile(f));
@@ -173,23 +178,25 @@ async function one({ f, slot }) {
   const nd = { name: f.name, file: up.file, thumb: r.thumb, text: r.text.slice(0, 12000), src: r.src, ts: Date.now(), dark: !!r.dark };
   // 1) aynı belge tekrar yüklendiyse sessizce atla
   const dup = A.docs.find(d => d.k !== 'foto' && d.src !== 'beyan' && d.text && r.text && sig(d.text) === sig(r.text) && sig(r.text).length > 40);
-  if (dup) { UQ.dup = (UQ.dup || 0) + 1; return; }
+  if (dup) { UQ.dup = (UQ.dup || 0) + 1; pp.end('warn', 'Aynı belge zaten yüklü – atlandı'); return; }
   // 2) adı görünmeyen devam/ek ekran görüntüsü: aynı türde tek belge varsa ona ekle
-  const noName = a.ck.some(c => c.t === 'bad' && /adı|ad-soyad|metin okunamadı/.test(c.m)) && !a.ck.some(c => c.t === 'bad' && /gibi görünüyor|uyuşmuyor|adına/.test(c.m));
+  const noName = a.ck.some(c => (c.t === 'bad' || c.t === 'warn') && /adı|ad-soyad|metin okunamadı/.test(c.m)) && !a.ck.some(c => c.t === 'bad' && /gibi görünüyor|uyuşmuyor|adına/.test(c.m));
   if (k !== '?' && k !== 'foto' && L.known(k) && noName && r.src === 'img') {
     let ex = A.docs.find(d => d.id === k + ':' + w && w !== '?' && d.src !== 'beyan' && L.dstat(d) !== 'bad');
     if (!ex && w === '?') { const cs = A.docs.filter(d => d.k === k && d.w !== '?' && L.dstat(d) !== 'bad'); if (cs.length === 1) ex = cs[0]; }
-    if (ex) { mergeInto(ex, { ...nd }); saveNow(); return; }
+    if (ex) { mergeInto(ex, { ...nd }); saveNow(); pp.end('ok', 'Mevcut belgeye eklendi'); return; }
   }
   if (a.ck.some(c => c.t === 'bad')) UQ.rej.push(f.name);
   const id = k + ':' + w;
   // 3) otomatik tanınan, aynı kutuda belge varsa ve içerik farklıysa birleştir (çok ekranlı belge)
   const ex2 = !s && w !== '?' && A.docs.find(d => d.id === id && d.src !== 'beyan' && L.dstat(d) !== 'bad');
-  if (ex2 && !a.ck.some(c => c.t === 'bad')) { mergeInto(ex2, { ...nd }); saveNow(); return; }
+  if (ex2 && !a.ck.some(c => c.t === 'bad')) { mergeInto(ex2, { ...nd }); saveNow(); pp.end('ok', 'Mevcut belgeye eklendi'); return; }
   if (w !== '?') A.docs = A.docs.filter(d => d.id !== id);
   L.apply(F, a.patches || []);
   A.docs.push({ id, k, w, ...nd, ck: a.ck, info: a.info });
   saveNow();
+  const bd = a.ck.find(c => c.t === 'bad'), wn = a.ck.find(c => c.t === 'warn');
+  pp.end(bd ? 'bad' : wn ? 'warn' : 'ok', bd ? 'Kabul edilmedi: ' + bd.m : wn ? 'Yüklendi – uyarı: ' + wn.m : 'Yüklendi ve doğrulandı');
 }
 function status() {
   const t = UQ.total, d = UQ.done, bar = $('#lgb');
@@ -202,6 +209,12 @@ function finish() {
   if (A) { L.refresh(F, A.docs); dirty = true; flushSave(); renderDocs(); sidebar(); }
   const m = [ok ? ok + ' belge yüklendi ve kaydedildi' : '', dup ? dup + ' aynı belge atlandı' : '', rej.length ? 'Kabul edilmeyen: ' + rej.join(', ') : '', fail.length ? 'Okunamadı: ' + fail.join(', ') : ''].filter(Boolean).join(' · ');
   if (m) toast(m.slice(0, 160));
+}
+function upPop(name) {
+  let box = $('#upq'); if (!box) { box = document.createElement('div'); box.id = 'upq'; document.body.appendChild(box); }
+  const e = document.createElement('div'); e.className = 'upp'; e.innerHTML = '<span class="ms spin">progress_activity</span><div><b></b><span>Yükleniyor…</span></div>'; e.querySelector('b').textContent = name; box.appendChild(e);
+  let done = 0;
+  return { end(t, m) { if (done) return; done = 1; e.className = 'upp ' + t; e.querySelector('.ms').className = 'ms'; e.querySelector('.ms').textContent = t === 'ok' ? 'check_circle' : t === 'warn' ? 'warning' : 'error'; e.querySelector('span:last-child').textContent = m; setTimeout(() => { e.classList.add('out'); setTimeout(() => e.remove(), 400); }, t === 'ok' ? 3500 : 7000); } };
 }
 let rs;
 const renderSoon = () => { if (rs) return; rs = setTimeout(() => { rs = 0; if (A) { renderDocs(); sidebar(); } }, 300); };
@@ -260,7 +273,7 @@ function vLogin() {
 function vRegister() {
   const i = (id, l, t = 'text', x = '') => `<div><label class="lbl">${l}</label><input id="${id}" type="${t}" class="inp" ${x}></div>`;
   return `<div class="w-full max-w-2xl mx-auto my-6 fade-in"><div class="card shadow-lg p-6 sm:p-8"><div class="mb-6 flex justify-between items-center border-b border-gray-100 dark:border-amoled-border pb-4"><div><h2 class="text-2xl font-bold text-gray-900 dark:text-white">Yeni Kayıt</h2><p class="text-sm text-gray-500 mt-1">Lütfen tüm alanları doldurun.</p></div><button onclick="S.mode='in';render()" class="text-gray-400 hover:text-gray-600"><span class="ms text-xl">close</span></button></div>
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${i('rt', 'T.C. Kimlik No', 'text', 'maxlength="11" inputmode="numeric"')}${i('rn', 'Ad Soyad')}${i('re', 'E-posta', 'email')}${i('rtel', 'Cep Telefonu', 'tel')}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="lbl" id="rtl">T.C. Kimlik No</label><input id="rt" type="text" class="inp" maxlength="11" inputmode="numeric"><label class="flex items-center gap-2 mt-2 text-xs cursor-pointer"><input type="checkbox" id="rfor" onchange="foreignToggle(this.checked)" class="w-4 h-4 rounded"> Yabancı uyruklu öğrenciyim</label></div>${i('rn', 'Ad Soyad')}${i('re', 'E-posta', 'email')}${i('rtel', 'Cep Telefonu', 'tel')}
   <div class="sm:col-span-2"><label class="lbl">Üniversite / Fakülte</label><select id="ru" class="inp"><option>${UNI}</option></select><p class="text-[11px] text-gray-500 mt-1">Yalnızca Tekirdağ Namık Kemal Üniversitesi Tıp Fakültesi öğrencileri başvurabilir.</p></div>
   <div class="sm:col-span-2"><label class="lbl">E-posta doğrulama kodu</label><div class="flex flex-wrap gap-2"><input id="rk" class="inp flex-1 min-w-[8rem]" inputmode="numeric" maxlength="6" placeholder="6 haneli kod"><button type="button" class="btn whitespace-nowrap shrink-0" onclick="sendCode('#re','#rk')"><span class="ms">mail</span> Kod gönder</button></div></div>${i('rp', window.DEMO ? 'Şifre' : 'Şifre (en az 8 karakter)', 'password')}${i('rp2', 'Şifre Tekrar', 'password')}</div>
   <div class="mt-6 flex justify-end gap-3"><button onclick="S.mode='in';render()" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">İptal</button><button onclick="register()" class="btn-p">Kaydı Tamamla</button></div></div></div>`;
@@ -270,7 +283,7 @@ const ORDER = ['terms', 'id', 'docs', 'form', 'sum'];
 const TABS = [['terms', 'Şartlar', 'description', 'Şartlar'], ['id', 'Kimlik', 'badge', 'Kimlik'], ['docs', 'Belgeler', 'folder_open', 'Belge'], ['form', 'Başvuru Formu', 'quiz', 'Form'], ['sum', 'Özet / Gönder', 'send', 'Gönder']];
 const IDK = ['ad', 'tc', 'sinif', 'anne.ad', 'anne.hayat', 'baba.ad', 'baba.hayat', 'anne.tc', 'baba.tc'];
 const SINIF = ['Hazırlık', '1. sınıf', '2. sınıf', '3. sınıf', '4. sınıf', '5. sınıf', '6. sınıf'];
-const IDF_ = { s: [['ad', 'Adınız – Soyadınız (kimlikteki gibi)', 't'], ['tc', 'T.C. Kimlik Numaranız', 't'], ['sinif', 'Sınıfınız', 's', 0, SINIF]], m: [['anne.ad', 'Annenizin Adı', 't'], ['anne.hayat', 'Anne hayatta mı?', 'y'], ['anne.tc', 'Anne T.C. Kimlik No', 't']], f: [['baba.ad', 'Babanızın Adı', 't'], ['baba.hayat', 'Baba hayatta mı?', 'y'], ['baba.tc', 'Baba T.C. Kimlik No', 't']] };
+const IDF_ = { s: [['ad', 'Adınız – Soyadınız (kimlikteki gibi)', 't'], ['tc', 'T.C. Kimlik No (yabancı uyruklu: Yabancı Kimlik / Pasaport No)', 't'], ['sinif', 'Sınıfınız', 's', 0, SINIF]], m: [['anne.ad', 'Annenizin Adı Soyadı', 't'], ['anne.hayat', 'Anne hayatta mı?', 'y'], ['anne.tc', 'Anne T.C. / Yabancı Kimlik No', 't']], f: [['baba.ad', 'Babanızın Adı Soyadı', 't'], ['baba.hayat', 'Baba hayatta mı?', 'y'], ['baba.tc', 'Baba T.C. / Yabancı Kimlik No', 't']] };
 const gateOf = t => { if (S.unlock) return null; const st = L.steps(F, A.docs, A.terms), i = ORDER.indexOf(t); for (let j = 0; j < i; j++) if (!st[j].ok) return { j, why: st[j].why }; return null; };
 const firstOpen = () => { const i = L.steps(F, A.docs, A.terms).findIndex(x => !x.ok); return i < 0 ? 'sum' : ORDER[i]; };
 function vStudent() {
@@ -315,6 +328,7 @@ function pTerms() {
     'İstenen kayıt yoksa bile (tapu, araç, vergi levhası, 4A/4B/4C, KYK vb.) <b>“kayıt bulunamadı”</b> yazan, isim görünen e-Devlet ekranı zorunludur.',
     'Hazırlık/1. sınıfa yeni başlayanlar ÖSYM sonuç + yerleştirme belgesi, diğer sınıflar transkript verir.',
     'Anne/baba vefat etmişse onun yerine öğrencinin kendi 4A-4B-4C bilgileri istenir. Çalışan ebeveyn için bordro, emekli için 4A/4B/4C aylık bilgisi gerekir.',
+    '<b>Yabancı uyruklu öğrenciler</b> için de burs vardır: T.C. kimlik numarasına bağlı olup sizde bulunmayan belgelerde <b>“Yok / mevcut değil”</b> düğmesiyle belgenin mevcut olmadığını beyan edebilirsiniz.',
     'Yurtta kalan için yurt belgesi, kirada kalan için kira kontratı; ailenin evi kiraysa ailenin kira kontratı eklenir.',
     'Başvuru formu ayrıca yüklenmez; form bilgileri sistemde soru olarak sorulur. Yanıltıcı bilgi/belge verildiği anlaşılırsa burs kesilir, ödenen tutarlar yasal faiziyle geri alınır.'].map(t => `<li class="flex gap-2.5"><span class="ms text-primary-500 mt-0.5">check_circle</span><span>${t}</span></li>`).join('')}</ul>
   <p class="text-xs text-gray-500 mt-4">Sorularınız için: Tekirdağ Tabip Odası · +90 282 261 89 81 · +90 530 943 34 97 · tekirdagtabip@gmail.com · <a class="underline" href="https://www.tto.org.tr/ogrenci-bursu" target="_blank" rel="noopener">tto.org.tr/ogrenci-bursu</a></p>
@@ -334,7 +348,7 @@ function fld([k, l, t, , o]) {
 function sf(k, v) { F[k] = v; if (k === 'ailedeMi' && S.tab === 'form') { const y = scrollY; $('#page').innerHTML = pForm(); scrollTo(0, y); } if (F._a[k]) { delete F._a[k]; const el = document.querySelector('#f_' + k.replace('.', '_') + ' span'); if (el) el.remove(); }
   if (IDK.includes(k)) { clearTimeout(sf.t); sf.t = setTimeout(() => { L.refresh(F, A.docs); save(); stepper(); }, 500); } save(); sidebar(); }
 const SEC = { 1: 'I – Kimlik ve İletişim Bilgileri', 2: 'II – Eğitim Bilgileri', 3: 'III – Sosyal ve Ekonomik Duruma İlişkin Bilgiler' };
-const PH = { dogum: 'Tekirdağ / 01.01.2003', tel: '05xx xxx xx xx', mail: 'ornek@mail.com', gno: 'Ör: 3,20 (1. sınıfsanız: Yok)', okulno: 'Okul numaranız', giris: 'Ör: 2022', gelir: 'Yoksa boş geçin', cocuk: 'Ör: 0', 'anne.tel': '05xx xxx xx xx', 'baba.tel': '05xx xxx xx xx', 'anne.gelir': 'Ör: 26.000 TL', 'baba.gelir': 'Ör: 30.000 TL', ad: 'Adınız Soyadınız (kimlikteki gibi)', 'anne.ad': 'Ad Soyad (son kelime soyad)', 'baba.ad': 'Ad Soyad (son kelime soyad)' };
+const PH = { dogum: 'Tekirdağ / 01.01.2003', tel: '05xx xxx xx xx', mail: 'ornek@mail.com', gno: 'Ör: 3,20 (1. sınıfsanız: Yok)', okulno: 'Okul numaranız', giris: 'Ör: 2022', gelir: 'Yoksa boş geçin', cocuk: 'Ör: 0', 'anne.tel': '05xx xxx xx xx', 'baba.tel': '05xx xxx xx xx', 'anne.gelir': 'Ör: 26.000 TL', 'baba.gelir': 'Ör: 30.000 TL', ad: 'Adınız Soyadınız (kimlikteki gibi)', 'anne.ad': 'Ad Soyad', 'baba.ad': 'Ad Soyad' };
 const has = k => String(F[k] || '').trim() !== '';
 const STUF = FL.filter(f => !['ad', 'tc', 'sinif'].includes(f[0]));
 function fq(a) {
@@ -353,7 +367,7 @@ function demoFill() {
 function pId() {
   const g = x => `<div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">${x}</div>`, h = t => `<h3 class="text-sm font-bold text-gray-900 dark:text-white mt-6 mb-3 pb-2 border-b border-gray-100 dark:border-amoled-border">${t}</h3>`;
   return `<div class="card p-5 sm:p-6 fade-in"><h2 class="text-lg font-bold text-gray-900 dark:text-white"><span class="ms text-primary-500 mr-2">badge</span>Kimlik Bilgileri</h2>
-  <p class="text-xs text-gray-500 mt-1">Önce yalnızca kimlik bilgileri istenir; belgeleri yükledikten sonra form bilgileri belgelerden otomatik dolar. Ad-soyadı yazarken son kelime soyad sayılır. Anne ve baba için yalnızca ad yazmanız yeterlidir. <span class="req">*</span> zorunlu.</p>
+  <p class="text-xs text-gray-500 mt-1">Önce yalnızca kimlik bilgileri istenir; belgeleri yükledikten sonra form bilgileri belgelerden otomatik dolar. <span class="req">*</span> zorunlu.</p>
   ${h('Öğrenci')}${g(IDF_.s.map(fq).join(''))}${h('Anne')}${g(IDF_.m.map(fq).join(''))}${h('Baba')}${g(IDF_.f.map(fq).join(''))}
   <div class="mt-6 flex flex-wrap gap-2 items-center"><button class="btn-p" data-nxt="docs" onclick="go('docs')">Belgelere geç <span class="ms">arrow_forward</span></button><span id="gh" class="gh"></span></div></div>`;
 }
@@ -402,7 +416,7 @@ function slot(x) {
    <p class="text-[11px] text-gray-500 leading-tight mb-1">${x.w !== 's' && x.w !== 'a' ? `<b class="text-primary-600">${WN[x.w]}</b> · ` : ''}${E(x.d)}</p>
    ${d ? `<p class="text-[11px] text-gray-400 truncate">${E(d.name)}${(d.extra || []).length ? ' (+' + d.extra.length + ' ek)' : ''}</p>${d.info.map(t => `<div class="text-[11px] text-gray-700 dark:text-gray-300"><span class="ms text-primary-500 mr-1">chevron_right</span>${E(t)}</div>`).join('')}${d.ck.filter(c => c.t !== 'ok').map(c => `<div class="text-[11px] ${dcls[c.t]}"><span class="ms mr-1">${dico[c.t]}</span>${E(c.m)}</div>`).join('')}` : ''}
    <div class="mt-2 flex flex-wrap gap-1.5">${x.h ? `<span class="text-[11px] text-gray-500 w-full">${E(x.h)}</span>` : ''}${/^http/.test(x.l) ? `<a class="btn" href="${x.l}" target="_blank" rel="noopener"><span class="ms">open_in_new</span> e-Devlet'ten al</a>` : ''}
-   <button class="btn" onclick="pick('${x.id}')"><span class="ms">upload</span>${d ? 'Değiştir / ek ekle' : 'Dosya seç'}</button>${!d && (NONE_OK.includes(x.k) || x.none) ? `<button class="btn" onclick="markNone('${x.id}')"><span class="ms">block</span> Yok</button>` : ''}${d && d.src !== 'beyan' ? `<button class="btn" onclick="pv(${i})"><span class="ms">visibility</span> Önizle</button>` : ''}${d ? `<button class="btn text-red-600" onclick="delDoc(${i})"><span class="ms">delete</span></button>` : ''}</div></div></div>`;
+   <button class="btn" onclick="pick('${x.id}')"><span class="ms">upload</span>${d ? 'Değiştir / ek ekle' : 'Dosya seç'}</button>${!d ? `<button class="btn" title="Bu belge sizde mevcut değilse (ör. yabancı uyruklu öğrenci) işaretleyin" onclick="markNone('${x.id}')"><span class="ms">block</span> Yok / mevcut değil</button>` : ''}${d && d.src !== 'beyan' ? `<button class="btn" onclick="pv(${i})"><span class="ms">visibility</span> Önizle</button>` : ''}${d ? `<button class="btn text-red-600" onclick="delDoc(${i})"><span class="ms">delete</span></button>` : ''}</div></div></div>`;
 }
 async function pdfPages(url, host) {
   const pdf = await pdfjsLib.getDocument({ data: await (await fetch(url)).arrayBuffer() }).promise; host.innerHTML = '';

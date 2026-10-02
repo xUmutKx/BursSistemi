@@ -59,13 +59,13 @@
       const c = String(Math.floor(Math.random() * 1e6)).padStart(6, '0'); CODES[em] = c; return R(200, { ok: true, demoCode: c });
     }
     if (p === '/api/register' && m === 'POST') {
-      const id = String(b.tc || '').trim(); if (!/^\d{11}$/.test(id)) return R(400, { error: 'TCKN 11 haneli olmalı' });
+      const id = String(b.tc || '').trim().toLowerCase(), foreign = !!b.foreign; if (foreign ? !/^[a-z0-9]{5,20}$/.test(id) : !/^\d{11}$/.test(id)) return R(400, { error: foreign ? 'Yabancı kimlik / pasaport no 5-20 harf-rakam olmalı' : 'TCKN 11 haneli olmalı' });
       if (!b.name || String(b.name).trim().length < 3) return R(400, { error: 'Ad soyad girin' }); if (!b.pw || String(b.pw).length < (LIVE ? 8 : 3)) return R(400, { error: 'Şifre en az ' + (LIVE ? 8 : 3) + ' karakter olmalı' });
       if (String(b.uni || '').trim() !== UNI) return R(400, { error: 'Yalnızca ' + UNI + ' öğrencileri başvurabilir' });
       const em = String(b.email || '').trim().toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) return R(400, { error: 'Geçerli bir e-posta adresi girin' });
       if (!CODES[em] || CODES[em] !== String(b.code || '').trim()) return R(400, { error: 'E-posta doğrulama kodu hatalı veya süresi dolmuş' }); delete CODES[em];
       const old = db.users[id]; if (old && !old.demo) return R(409, { error: 'Bu TCKN zaten kayıtlı' });
-      const nu = db.users[id] = mkUser(id, String(b.name).trim(), String(b.pw), 'student', { demo: !LIVE, email: em, tel: b.tel || '', uni: UNI });
+      const nu = db.users[id] = mkUser(id, String(b.name).trim(), String(b.pw), 'student', { demo: !LIVE, foreign, email: em, tel: b.tel || '', uni: UNI });
       const a = db.apps[id] = db.apps[id] || newApp(nu); a.F.ad = nu.name; a.F.mail = a.F.mail || nu.email; a.F.tel = a.F.tel || nu.tel; if (b.uni && !a.F.fakulte) a.F.fakulte = b.uni; await save(); return R(200, { ok: true });
     }
     if (p.startsWith('/api/file/')) { const q = p.split('/'); const b = await fget(q[3] + '/' + q[4]).catch(() => null); return b ? new Response(b, { status: 200, headers: { 'Content-Type': b.type || 'application/octet-stream' } }) : R(404, { error: 'Dosya bulunamadı' }); }
