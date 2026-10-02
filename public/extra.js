@@ -241,7 +241,7 @@ function cfgRun(src) {
 // ---------- E-posta doğrulama kodu + Profil ----------
 async function sendCode(emSel, kSel) {
   const em = ($(emSel).value || '').trim(); if (!em) return toast('Önce e-posta adresini yazın');
-  try { const d = await api('/api/email-code', { method: 'POST', json: { email: em } }); if (d.demoCode) { $(kSel).value = d.demoCode; toast('Demo: kod otomatik girildi (' + d.demoCode + ')'); } else toast('Kod e-postanıza gönderildi (10 dk geçerli)'); }
+  try { const d = await api('/api/email-code', { method: 'POST', json: { email: em } }); if (d.demoCode) demoMail(em, d.demoCode, kSel); else toast('Kod e-postanıza gönderildi (10 dk geçerli)'); }
   catch (e) { toast(e.message); }
 }
 function profileOpen() {
@@ -260,4 +260,14 @@ async function profileSave() {
   if ($('#pn').value || $('#pc').value) { if ($('#pn').value !== $('#pn2').value) return toast('Yeni şifreler uyuşmuyor'); b.cur = $('#pc').value; b.pw = $('#pn').value; }
   try { const d = await api('/api/profile', { method: 'POST', json: b }); if (typeof F !== 'undefined' && F) { F.mail = d.email; F.tel = d.tel; } if (typeof A !== 'undefined' && A) { A.F.mail = d.email; A.F.tel = d.tel; } $('#prf').classList.add('hidden'); toast('Profil güncellendi'); }
   catch (e) { toast(e.message); }
+}
+
+// Demo: gerçek e-posta gitmez; kod, "gelen kutusu" görünümünde gösterilir (ilerde gerçek SMTP ile tto.org.tr alan adından gidecek).
+function demoMail(to, code, kSel) {
+  let h = $('#dml'); if (!h) { h = document.createElement('div'); h.id = 'dml'; h.className = 'fixed inset-0 z-[120] bg-black/60 overflow-auto p-3 sm:p-6'; h.onclick = e => { if (e.target === h) h.classList.add('hidden'); }; document.body.appendChild(h); }
+  h.innerHTML = `<div class="card max-w-md mx-auto p-0 overflow-hidden fade-in" role="dialog" aria-modal="true"><div class="px-4 py-2 bg-purple-100 text-purple-800 text-[11px] font-semibold flex items-center gap-1.5"><span class="ms text-base">science</span>DEMO – gerçek e-posta gönderilmedi, gelen kutusu simülasyonu</div>
+  <div class="p-4 sm:p-5"><div class="text-xs text-gray-500 space-y-0.5 mb-3"><div><b>Kimden:</b> E-Burs Portalı &lt;no-reply@tto.org.tr&gt;</div><div><b>Kime:</b> ${E(to)}</div><div><b>Konu:</b> E-Burs Portalı doğrulama kodu</div></div>
+  <div class="rounded-lg bg-gray-50 dark:bg-amoled-base p-4 text-sm"><p>Merhaba,</p><p class="mt-2">Doğrulama kodunuz:</p><p class="text-3xl font-bold tracking-[.3em] text-primary-600 my-2">${E(code)}</p><p class="text-xs text-gray-500">Kod 10 dakika geçerlidir. Bu isteği siz yapmadıysanız bu iletiyi dikkate almayın.<br>Tekirdağ Tabip Odası</p></div>
+  <div class="mt-4 flex justify-end gap-2"><button class="btn" onclick="$('#dml').classList.add('hidden')">Kapat</button><button class="btn-p" onclick="$('${kSel}').value='${E(code)}';$('#dml').classList.add('hidden')">Kodu kutuya yaz</button></div></div></div>`;
+  h.classList.remove('hidden');
 }
