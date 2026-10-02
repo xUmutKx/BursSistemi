@@ -42,7 +42,6 @@ async function boot() {
   try { const c = await api('/api/cfg'); applyLock(c.lock); S.term = c.term; chrome(); } catch (e) {}
   render();
   if (S.token) { try { const d = await api('/api/me'); setUser(d); render(); } catch (e) { if (e.status === 401 || e.status === 403) { S.token = ''; localStorage.removeItem('tto_token'); } } }
-  setTimeout(() => { const s = $('#splash'); s.classList.add('out'); setTimeout(() => s.remove(), 700); }, 1100);
 }
 function setUser(d) { S.user = d.user; if (d.cfg) { L.setCustom(d.cfg.custom); S.term = d.cfg.term; } S.demoUser = !!d.demo; if (d.app) { A = S.app = d.app; F = A.F; F._a = F._a || {}; A.docs = (A.docs || []).filter(d => d.k === '?' || L.known(d.k)); S.tab = firstOpen(); } if (d.user.role === 'admin') loadAdmin(); }
 let loging = false;
