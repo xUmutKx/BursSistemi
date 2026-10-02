@@ -137,7 +137,10 @@ async function api(req, res, url) {
       }
     }
     return send(res, 404, { error: 'Bulunamadı' });
-  } catch (e) { return send(res, 500, { error: e.message || 'Sunucu hatası' }); }
+  } catch (e) {
+    const msg = String((e && e.message) || 'Sunucu hatası').replace(/[<>"'`]/g, '').slice(0, 220);
+    return send(res, 500, { error: msg || 'Sunucu hatası' });
+  }
 }
 
 http.createServer((req, res) => {
