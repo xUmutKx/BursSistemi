@@ -389,7 +389,7 @@
   const cleanQ = q => (!q || !/^[a-z0-9]{3,12}$/.test(String(q.id || '')) || !S_(q.t, 80)) ? null : { id: q.id, t: S_(q.t, 80), type: ['t', 'a', 'y', 's'].includes(q.type) ? q.type : 't', opts: list(q.opts, 12), req: !!q.req, sec: [1, 2, 3, 4].includes(+q.sec) ? +q.sec : 3 };
   const uniq = (a, f) => { const seen = {}; return a.map(f).filter(x => x && !seen[x.k || x.id] && (seen[x.k || x.id] = 1)); };
   L.mergeSet = x => {
-    const d = L.defSet(); x = x || {}; d.quota = +x.quota >= 0 ? +x.quota : d.quota; for (const k in d.crit) Object.assign(d.crit[k], (x.crit || {})[k] || {}); for (const k in d.rules) Object.assign(d.rules[k], (x.rules || {})[k] || {});
+    const d = L.defSet(); x = x || {}; d.quota = +x.quota >= 0 ? +x.quota : d.quota; for (const k in d.crit) Object.assign(d.crit[k], (x.crit || {})[k] || {}); for (const k in d.rules) Object.assign(d.rules[k], (x.rules || {})[k] || {}); d.rules.sent.on = true; d.rules.docs.on = true;
     if (x.term && typeof x.term === 'object') d.term = { name: S_(x.term.name, 80) || d.term.name, open: dte(x.term.open), close: dte(x.term.close), enforce: x.term.enforce !== false && x.term.enforce !== 0, msg: S_(x.term.msg, 300) };
     const c = x.custom || {}; d.custom = { docs: uniq((Array.isArray(c.docs) ? c.docs : []).slice(0, 30), cleanDoc), qs: uniq((Array.isArray(c.qs) ? c.qs : []).slice(0, 40), cleanQ) };
     return d;
@@ -421,8 +421,8 @@
   };
   L.fails = (a, m, S) => {
     const R = S.rules, r = [], on = k => R[k] && R[k].on, v = k => +R[k].v;
-    if (on('sent') && !['Beklemede', 'Onaylandı'].includes(a.status)) r.push('Başvuru gönderilmemiş');
-    if (on('docs') && !m.docsOk) r.push('Belgeler eksik/sorunlu (' + m.dp + ')');
+    if (!['Beklemede', 'Onaylandı'].includes(a.status)) r.push('Başvuru gönderilmemiş');
+    if (!m.docsOk) r.push('Belgeler eksik/sorunlu (' + m.dp + ')');
     if (on('maxTot') && m.total > v('maxTot')) r.push('Toplam gelir ' + m.total + ' TL > ' + v('maxTot'));
     if (on('maxPc') && m.pc > v('maxPc')) r.push('Kişi başı gelir ' + m.pc + ' TL > ' + v('maxPc'));
     if (on('maxHouse') && m.houses > v('maxHouse')) r.push('Ev sayısı ' + m.houses + ' > ' + v('maxHouse'));

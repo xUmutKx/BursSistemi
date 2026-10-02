@@ -32,7 +32,7 @@
   const fget = async k => { const d = await idb(); return new Promise((res, rej) => { const q = d.transaction('f').objectStore('f').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); };
   const fdel = async k => { try { const d = await idb(); d.transaction('f', 'readwrite').objectStore('f').delete(k); } catch (e) {} };
   const WN_ = L.WN;
-  const ready = (async () => { await loadDb(); if (!LIVE && !db.seeded && !Object.keys(db.apps).length) seed(24); db.seeded = 1; await Promise.all(jobs); await save(); })();
+  const ready = (async () => { await loadDb(); if (!LIVE && !db.seeded && !Object.keys(db.apps).length) seed(50); db.seeded = 1; await Promise.all(jobs); await save(); })();
   window.demoReady = ready;
   window.demoFileUrl = async (tc, file) => { const b = await fget(tc + '/' + file); return b ? URL.createObjectURL(b) : ''; };
   const R = (code, obj) => new Response(JSON.stringify(obj), { status: code, headers: { 'Content-Type': 'application/json' } });
