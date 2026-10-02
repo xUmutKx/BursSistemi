@@ -2086,3 +2086,25 @@ details>summary{list-style:none}details>summary::-webkit-details-marker{display:
 .hlp section.hlp-cur{border-left-color:#b4121f;background:rgba(180,18,31,.05);border-radius:.25rem}
 .cfgrow{display:flex;gap:.75rem;align-items:center;justify-content:space-between;padding:.6rem 0;border-top:1px solid rgba(148,163,184,.25)}
 .cfgrow:first-of-type{border-top:0}
+
+/* v10 ek yardımcı sınıflar (derlenmiş tailwind'de yoklar) */
+.whitespace-nowrap{white-space:nowrap}
+.min-w-\[8rem\]{min-width:8rem}
+.bottom-20{bottom:5rem}
+.z-40{z-index:40}
+.z-\[95\]{z-index:95}
+.z-\[120\]{z-index:120}
+.hover\:bg-primary-700:hover{background-color:#b4121f}
+.tracking-\[\.3em\]{letter-spacing:.3em}
+@media (min-width:768px){.md\:bottom-5{bottom:1.25rem}}
+#helpBtn{position:fixed;right:1rem;bottom:5rem;width:2.75rem;height:2.75rem;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:#d71920;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.3);z-index:40}
+@media (min-width:768px){#helpBtn{bottom:1.25rem}}
+/* telefonda üst çubuk taşmasın */
+@media (max-width:640px){
+  nav .justify-between>div:first-child{min-width:0;flex:1 1 auto;gap:.5rem}
+  nav .justify-between>div:first-child>div{min-width:0}
+  nav .justify-between>div:first-child img{width:2.25rem;height:2.25rem;flex-shrink:0}
+  nav h1,nav p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  nav .justify-between>div:last-child{flex-shrink:0;gap:.25rem}
+  #profBtn,nav button[onclick="logout()"]{padding:.375rem .5rem}
+}
