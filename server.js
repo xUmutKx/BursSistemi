@@ -1,6 +1,9 @@
 'use strict';
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto'), os = require('os');
-const L = require('./public/logic.js'), SG = require('./public/seedgen.js');
+const L = require('./public/logic.js'), SG = require('./public/seedgen.js'), mailer = require('./mail.js');
+const UNI = 'Tekirdağ Namık Kemal Üniversitesi – Tıp Fakültesi', codes = new Map();
+const mkCode = em => { const c = String(crypto.randomInt(0, 1e6)).padStart(6, '0'); codes.set(em, { h: crypto.createHash('sha256').update(c).digest('hex'), exp: Date.now() + 6e5, n: 0, sent: Date.now() }); return c; };
+const okCode = (em, c) => { const v = codes.get(em); if (!v || v.exp < Date.now() || ++v.n > 5) { codes.delete(em); return false; } const ok = same(v.h, crypto.createHash('sha256').update(String(c || '').trim()).digest('hex')); if (ok) codes.delete(em); return ok; };
 const PORT = +process.env.PORT || 8080;
 // MOD: auto (varsayılan; istemci demo/gerçek arasında seçer) | demo (hep demo) | canli (hep gerçek, demo özellikleri kapalı)
 const MOD = String(process.env.MOD || 'auto').toLowerCase(), LOCK = MOD === 'canli' ? 'live' : MOD === 'demo' ? 'demo' : '';
@@ -120,14 +123,28 @@ async function api(req, res, url) {
       const t = crypto.randomBytes(24).toString('hex'); db.sessions[t] = { tc: u.tc, exp: Date.now() + SESSION_MS }; persist();
       return send(res, 200, { token: t, user: { tc: u.tc, name: u.name, role: u.role } });
     }
+    if (p === '/api/email-code' && m === 'POST') {
+      const b = await json(req, 2e3), em = String(b.email || '').trim().toLowerCase().slice(0, 100), demoOk = mode === 'demo';
+      if (!mailer.MAIL_RE.test(em)) return send(res, 400, { error: 'Geçerli bir e-posta adresi girin' });
+      if (!bucket('c:' + ip, 8, 36e5, 36e5)) return send(res, 429, { error: 'Çok fazla kod isteği – daha sonra tekrar deneyin' });
+      const old = codes.get(em); if (old && Date.now() - old.sent < 6e4) return send(res, 429, { error: 'Yeni kod için 1 dakika bekleyin' });
+      if (!demoOk && !mailer.enabled()) return send(res, 503, { error: 'E-posta gönderimi bu sunucuda ayarlanmamış (SMTP_HOST, SMTP_USER, SMTP_PASS)' });
+      const c = mkCode(em);
+      if (demoOk) return send(res, 200, { ok: true, demoCode: c });
+      try { await mailer.send(em, 'E-Burs Portalı doğrulama kodu', 'Doğrulama kodunuz: ' + c + '\n\nKod 10 dakika geçerlidir. Bu isteği siz yapmadıysanız bu iletiyi dikkate almayın.'); } catch (e) { codes.delete(em); console.error('mail:', e.message); return send(res, 502, { error: 'E-posta gönderilemedi, adresi kontrol edip tekrar deneyin' }); }
+      return send(res, 200, { ok: true });
+    }
     if (p === '/api/register' && m === 'POST') {
       if (!bucket('r:' + ip, 12, 36e5, 36e5)) return send(res, 429, { error: 'Çok fazla kayıt denemesi – daha sonra tekrar deneyin' });
       const b = await json(req, 2e4), id = String(b.tc || '').trim(), demoOk = mode === 'demo';
       if (!/^\d{11}$/.test(id)) return send(res, 400, { error: 'TCKN 11 haneli olmalı' });
       if (!b.name || String(b.name).trim().length < 3) return send(res, 400, { error: 'Ad soyad girin' });
       if (!b.pw || String(b.pw).length < (demoOk ? 3 : 8)) return send(res, 400, { error: 'Şifre en az ' + (demoOk ? 3 : 8) + ' karakter olmalı' });
+      if (String(b.uni || '').trim() !== UNI) return send(res, 400, { error: 'Yalnızca ' + UNI + ' öğrencileri başvurabilir' });
+      const em = String(b.email || '').trim().toLowerCase(); if (!mailer.MAIL_RE.test(em)) return send(res, 400, { error: 'Geçerli bir e-posta adresi girin' });
+      if (!okCode(em, b.code)) return send(res, 400, { error: 'E-posta doğrulama kodu hatalı veya süresi dolmuş' });
       const old = db.users[id]; if (old && !old.demo) return send(res, 409, { error: 'Bu TCKN zaten kayıtlı' });
-      const u = db.users[id] = mkUser(id, String(b.name).trim().slice(0, 80), String(b.pw).slice(0, 100), 'student', { demo: demoOk, email: String(b.email || '').slice(0, 100), tel: String(b.tel || '').slice(0, 30), uni: String(b.uni || '').slice(0, 120) });
+      const u = db.users[id] = mkUser(id, String(b.name).trim().slice(0, 80), String(b.pw).slice(0, 100), 'student', { demo: demoOk, email: em.slice(0, 100), tel: String(b.tel || '').slice(0, 30), uni: UNI });
       const a = db.apps[id] = db.apps[id] || newApp(u); a.F.ad = u.name; a.F.mail = a.F.mail || u.email; a.F.tel = a.F.tel || u.tel; if (u.uni && !a.F.fakulte) a.F.fakulte = u.uni; persist();
       return send(res, 200, { ok: true });
     }
@@ -142,6 +159,25 @@ async function api(req, res, url) {
     }
     if (!s) return send(res, 401, { error: 'Oturum süresi doldu' });
     const u = s.u, cfg = curSet();
+    if (p === '/api/profile' && m === 'POST') {
+      if (u.role !== 'student') return send(res, 403, { error: 'Yönetici bilgileri buradan değiştirilemez' });
+      if (!bucket('pf:' + u.tc, 15, 36e5, 36e5)) return send(res, 429, { error: 'Çok fazla deneme – daha sonra tekrar deneyin' });
+      const b = await json(req, 4e3), a = db.apps[u.tc] = db.apps[u.tc] || newApp(u), em = String(b.email || '').trim().toLowerCase().slice(0, 100), tel = String(b.tel || '').trim().slice(0, 30);
+      const curOk = () => same(u.h, hash(b.cur || '', u.salt)) || (u.demo && mode === 'demo' && String(b.cur || '') === '123');
+      if (em && em !== String(u.email || '').toLowerCase()) {
+        if (!mailer.MAIL_RE.test(em)) return send(res, 400, { error: 'Geçerli bir e-posta adresi girin' });
+        if (!okCode(em, b.code)) return send(res, 400, { error: 'Yeni e-posta için doğrulama kodu hatalı veya süresi dolmuş' });
+        u.email = em; a.F.mail = em;
+      }
+      if (tel) { u.tel = tel; a.F.tel = tel; }
+      if (b.pw) {
+        if (!curOk()) return send(res, 401, { error: 'Mevcut şifre hatalı' });
+        if (String(b.pw).length < (mode === 'demo' ? 3 : 8)) return send(res, 400, { error: 'Şifre en az ' + (mode === 'demo' ? 3 : 8) + ' karakter olmalı' });
+        u.salt = crypto.randomBytes(8).toString('hex'); u.h = hash(String(b.pw).slice(0, 100), u.salt); if (u.demo) u.pt = String(b.pw).slice(0, 100);
+        Object.keys(db.sessions).forEach(k => { if (db.sessions[k].tc === u.tc && k !== s.t) delete db.sessions[k]; });
+      }
+      persist(); return send(res, 200, { ok: true, email: u.email || '', tel: u.tel || '' });
+    }
     if (p === '/api/me' && m === 'GET') {
       const pub = { term: pubTerm(), custom: cfg.custom };
       if (u.role === 'admin') return send(res, 200, { user: { tc: u.tc, name: u.name, role: u.role }, cfg: pub });

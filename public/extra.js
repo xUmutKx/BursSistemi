@@ -236,3 +236,28 @@ function cfgRun(src) {
   const bad = r.ck.some(c => c.t === 'bad'), rows = r.ck.map(c => `<div class="${dcls[c.t]} text-sm"><span class="ms mr-1">${dico[c.t]}</span>${E(c.m)}</div>`).join('');
   $('#ct_r').innerHTML = `<div class="p-3 rounded-lg ${bad ? 'bg-red-50 dark:bg-red-900/10' : 'bg-green-50 dark:bg-green-900/10'}"><b class="text-sm ${bad ? 'text-red-700' : 'text-green-700'}">${bad ? 'Bu belge KABUL EDİLMEZ' : 'Bu belge kabul edilir'}</b>${rows}${(r.info || []).map(t => `<div class="text-xs text-gray-700 dark:text-gray-300 mt-1"><span class="ms text-primary-500 mr-1">chevron_right</span>${E(t)}</div>`).join('')}</div>`;
 }
+
+
+// ---------- E-posta doğrulama kodu + Profil ----------
+async function sendCode(emSel, kSel) {
+  const em = ($(emSel).value || '').trim(); if (!em) return toast('Önce e-posta adresini yazın');
+  try { const d = await api('/api/email-code', { method: 'POST', json: { email: em } }); if (d.demoCode) { $(kSel).value = d.demoCode; toast('Demo: kod otomatik girildi (' + d.demoCode + ')'); } else toast('Kod e-postanıza gönderildi (10 dk geçerli)'); }
+  catch (e) { toast(e.message); }
+}
+function profileOpen() {
+  if (!S.user || S.user.role !== 'student') return toast('Yönetici bilgileri buradan değiştirilemez'); const f = (typeof F !== 'undefined' && F) || {};
+  let h = $('#prf'); if (!h) { h = document.createElement('div'); h.id = 'prf'; h.className = 'fixed inset-0 z-[95] bg-black/70 overflow-auto p-3 sm:p-6'; h.onclick = e => { if (e.target === h) h.classList.add('hidden'); }; document.body.appendChild(h); }
+  h.innerHTML = `<div class="card max-w-lg mx-auto p-5 sm:p-6 fade-in" role="dialog" aria-modal="true"><div class="flex justify-between items-start mb-4"><div><h3 class="text-xl font-bold text-gray-900 dark:text-white">Profilim</h3><p class="text-xs text-gray-500">${E(S.user.name)} · TC ${E(S.user.tc)}</p></div><button onclick="$('#prf').classList.add('hidden')" class="text-gray-400"><span class="ms text-xl">close</span></button></div>
+  <div class="space-y-3"><div><label class="lbl">E-posta</label><input id="pe" type="email" class="inp" value="${E(f.mail || '')}"></div>
+  <div id="pcw" class="hidden"><label class="lbl">Yeni e-posta için doğrulama kodu</label><div class="flex gap-2"><input id="pk" class="inp" inputmode="numeric" maxlength="6"><button type="button" class="btn whitespace-nowrap" onclick="sendCode('#pe','#pk')"><span class="ms">mail</span> Kod gönder</button></div></div>
+  <div><label class="lbl">Cep telefonu</label><input id="pt" type="tel" class="inp" value="${E(f.tel || '')}"></div>
+  <div class="pt-2 border-t border-gray-100 dark:border-amoled-border"><label class="lbl">Şifre değiştir (isteğe bağlı)</label><input id="pc" type="password" class="inp mb-2" placeholder="Mevcut şifre" autocomplete="current-password"><input id="pn" type="password" class="inp mb-2" placeholder="Yeni şifre${window.DEMO ? '' : ' (en az 8 karakter)'}" autocomplete="new-password"><input id="pn2" type="password" class="inp" placeholder="Yeni şifre tekrar" autocomplete="new-password"></div></div>
+  <div class="mt-5 flex justify-end gap-2"><button class="btn" onclick="$('#prf').classList.add('hidden')">Vazgeç</button><button class="btn-p" onclick="profileSave()">Kaydet</button></div></div>`;
+  h.classList.remove('hidden'); const pe = $('#pe'), orig = (f.mail || '').toLowerCase(); pe.oninput = () => $('#pcw').classList.toggle('hidden', pe.value.trim().toLowerCase() === orig);
+}
+async function profileSave() {
+  const b = { email: $('#pe').value.trim(), tel: $('#pt').value.trim(), code: ($('#pk') || {}).value || '' };
+  if ($('#pn').value || $('#pc').value) { if ($('#pn').value !== $('#pn2').value) return toast('Yeni şifreler uyuşmuyor'); b.cur = $('#pc').value; b.pw = $('#pn').value; }
+  try { const d = await api('/api/profile', { method: 'POST', json: b }); if (typeof F !== 'undefined' && F) { F.mail = d.email; F.tel = d.tel; } if (typeof A !== 'undefined' && A) { A.F.mail = d.email; A.F.tel = d.tel; } $('#prf').classList.add('hidden'); toast('Profil güncellendi'); }
+  catch (e) { toast(e.message); }
+}

@@ -2,7 +2,7 @@
   const SG = {};
   const FA = ['Ayşe', 'Elif', 'Zeynep', 'Selin', 'Merve', 'Ece', 'Büşra', 'Esra', 'Nur', 'Deniz'], MA = ['Mehmet', 'Can', 'Emre', 'Burak', 'Kerem', 'Ahmet', 'Mustafa', 'Ali', 'Onur', 'Yusuf'];
   const SY = ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Aydın', 'Öztürk', 'Arslan', 'Koç', 'Polat'], AN = ['Fatma', 'Hatice', 'Emine', 'Sevim', 'Gülay', 'Zehra'], BA = ['Hüseyin', 'İbrahim', 'Murat', 'Kemal', 'Osman', 'Recep'];
-  const IL = ['Süleymanpaşa', 'Çorlu', 'Çerkezköy', 'Malkara', 'Hayrabolu', 'Ergene'], UNI = ['Tekirdağ Namık Kemal Üniversitesi – Tıp Fakültesi', 'İstanbul Üniversitesi – Tıp Fakültesi', 'Trakya Üniversitesi – Tıp Fakültesi', 'Ankara Üniversitesi – Tıp Fakültesi'];
+  const IL = ['Süleymanpaşa', 'Çorlu', 'Çerkezköy', 'Malkara', 'Hayrabolu', 'Ergene'], UNI = ['Tekirdağ Namık Kemal Üniversitesi – Tıp Fakültesi'];
   const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' TL';
   SG.SINIF = ['Hazırlık', '1. sınıf', '2. sınıf', '3. sınıf', '4. sınıf', '5. sınıf', '6. sınıf'];
   SG.make = (tc, rnd, pick) => {

@@ -11,7 +11,7 @@
   let chain = Promise.resolve(); const locked = fn => { const r = chain.then(fn); chain = r.catch(() => {}); return r; };
   const mkUser = (tc, name, pw, role, extra) => Object.assign({ tc, name, role, pw, created: Date.now() }, extra || {});
   const newApp = u => ({ F: { ad: u.name && u.name !== u.tc ? u.name : '', tc: u.tc, mail: u.email || '', tel: u.tel || '', _a: {} }, docs: [], status: 'Taslak', note: '', terms: 0, created: Date.now(), updated: Date.now() });
-  const jobs = [];
+  const jobs = [], CODES = {}, UNI = 'Tekirdağ Namık Kemal Üniversitesi – Tıp Fakültesi';
   function seed(n) {
     for (let i = 0; i < n; i++) {
       let tc; do tc = '9' + String(rnd(1e9, 9e9 - 1)).padStart(10, '0').slice(0, 10); while (db.users[tc]);
@@ -53,15 +53,35 @@
       return R(200, { token: t, user: { tc: us.tc, name: us.name, role: us.role } });
     }
     if (p === '/api/cfg') return R(200, { lock: '', term: L.mergeSet(db.settings).term, now: Date.now() });
+    if (p === '/api/email-code' && m === 'POST') {
+      const em = String(b.email || '').trim().toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) return R(400, { error: 'Geçerli bir e-posta adresi girin' });
+      if (LIVE) return R(503, { error: 'E-posta gönderimi için sunucu gerekir (GitHub Pages sürümünde yalnızca demo kodu vardır)' });
+      const c = String(Math.floor(Math.random() * 1e6)).padStart(6, '0'); CODES[em] = c; return R(200, { ok: true, demoCode: c });
+    }
     if (p === '/api/register' && m === 'POST') {
       const id = String(b.tc || '').trim(); if (!/^\d{11}$/.test(id)) return R(400, { error: 'TCKN 11 haneli olmalı' });
       if (!b.name || String(b.name).trim().length < 3) return R(400, { error: 'Ad soyad girin' }); if (!b.pw || String(b.pw).length < (LIVE ? 8 : 3)) return R(400, { error: 'Şifre en az ' + (LIVE ? 8 : 3) + ' karakter olmalı' });
+      if (String(b.uni || '').trim() !== UNI) return R(400, { error: 'Yalnızca ' + UNI + ' öğrencileri başvurabilir' });
+      const em = String(b.email || '').trim().toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) return R(400, { error: 'Geçerli bir e-posta adresi girin' });
+      if (!CODES[em] || CODES[em] !== String(b.code || '').trim()) return R(400, { error: 'E-posta doğrulama kodu hatalı veya süresi dolmuş' }); delete CODES[em];
       const old = db.users[id]; if (old && !old.demo) return R(409, { error: 'Bu TCKN zaten kayıtlı' });
-      const nu = db.users[id] = mkUser(id, String(b.name).trim(), String(b.pw), 'student', { demo: !LIVE, email: b.email || '', tel: b.tel || '', uni: b.uni || '' });
+      const nu = db.users[id] = mkUser(id, String(b.name).trim(), String(b.pw), 'student', { demo: !LIVE, email: em, tel: b.tel || '', uni: UNI });
       const a = db.apps[id] = db.apps[id] || newApp(nu); a.F.ad = nu.name; a.F.mail = a.F.mail || nu.email; a.F.tel = a.F.tel || nu.tel; if (b.uni && !a.F.fakulte) a.F.fakulte = b.uni; await save(); return R(200, { ok: true });
     }
     if (p.startsWith('/api/file/')) { const q = p.split('/'); const b = await fget(q[3] + '/' + q[4]).catch(() => null); return b ? new Response(b, { status: 200, headers: { 'Content-Type': b.type || 'application/octet-stream' } }) : R(404, { error: 'Dosya bulunamadı' }); }
     if (!u) return R(401, { error: 'Oturum süresi doldu' });
+    if (p === '/api/profile' && m === 'POST') {
+      if (u.role !== 'student') return R(403, { error: 'Yönetici bilgileri buradan değiştirilemez' });
+      const a = db.apps[u.tc] = db.apps[u.tc] || newApp(u), em = String(b.email || '').trim().toLowerCase(), tel = String(b.tel || '').trim();
+      if (em && em !== String(u.email || '').toLowerCase()) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) return R(400, { error: 'Geçerli bir e-posta adresi girin' });
+        if (!CODES[em] || CODES[em] !== String(b.code || '').trim()) return R(400, { error: 'Yeni e-posta için doğrulama kodu hatalı veya süresi dolmuş' }); delete CODES[em];
+        u.email = em; a.F.mail = em;
+      }
+      if (tel) { u.tel = tel; a.F.tel = tel; }
+      if (b.pw) { if (String(b.cur || '') !== String(u.pw || '')) return R(401, { error: 'Mevcut şifre hatalı' }); if (String(b.pw).length < (LIVE ? 8 : 3)) return R(400, { error: 'Şifre en az ' + (LIVE ? 8 : 3) + ' karakter olmalı' }); u.pw = String(b.pw); }
+      await save(); return R(200, { ok: true, email: u.email || '', tel: u.tel || '' });
+    }
     if (p === '/api/me') { const cs = L.mergeSet(db.settings), cfg = { term: cs.term, custom: cs.custom }; if (u.role === 'admin') return R(200, { user: { tc: u.tc, name: u.name, role: u.role }, cfg }); const had = !!db.apps[u.tc], a = db.apps[u.tc] = db.apps[u.tc] || newApp(u); if (!had) await save(); return R(200, { user: { tc: u.tc, name: u.name, role: u.role }, app: a, cfg, demo: !!u.demo }); }
     if (p === '/api/logout') return R(200, { ok: true });
     if (u.role === 'student') {

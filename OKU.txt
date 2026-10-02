@@ -51,3 +51,12 @@ v9 NOTLARI (2027 Eylül dönemi hazırlığı)
 - BAKIM: data/yedek/ içine günlük otomatik yedek (son 14 gün). Güncelleme: yeni zip'i aynı yere açın; data/ silinmez.
 - Yeni dönem: Excel indirin > yönetici paneli "Tüm verileri sil" > Dönem sekmesinde yeni tarihleri girin.
 - GitHub'a yükleme: sh github-yukle.sh (Windows: github-yukle.bat) - depo adresini ilk seferde sorar. Pages çalışmazsa: depo > Settings > Pages > Source = GitHub Actions.
+
+v10 NOTLARI
+- Kayıt yalnızca Tekirdağ Namık Kemal Üniversitesi Tıp Fakültesi öğrencilerine açık (sunucu da denetler).
+- Kayıtta e-posta doğrulama kodu zorunlu. Gerçek sunucuda kodu SİTENİN kendi e-posta hesabı gönderir (yönetici paneli gerekmez); sunucuyu başlatırken ayarlayın:
+    SMTP_HOST=smtp.gmail.com SMTP_PORT=465 SMTP_USER=adres@gmail.com SMTP_PASS=uygulama_sifresi SMTP_FROM=adres@gmail.com node server.js
+  (Gmail için "uygulama şifresi" gerekir; ücretsiz Brevo/Resend SMTP de olur.) Ayarlanmazsa gerçek modda kayıt kodu gönderilemez.
+- Demo / GitHub Pages: e-posta gönderilemez; kod ekranda gösterilir ve kutuya otomatik girilir.
+- Profil (üst çubuk): e-posta (yeni adres için kod), telefon, şifre değiştirme (mevcut şifre gerekir). Şifre değişince diğer oturumlar kapanır.
+- Başvuru kuralları "gönderilmiş" ve "belgeler tam" her zaman geçerli: eksik belgeli başvuru Elendi görünür.
