@@ -1,14 +1,40 @@
-BURS SİSTEMİ v4
-Termux tek komut : cd ~/storage/downloads && unzip -o BursSistemi.zip -d ~ && sh ~/BursSistemi/baslat.sh
-Windows          : Baslat.bat'a çift tıkla.   Linux/Mac: sh baslat.sh
-Demo : yönetici admin / 123   |   öğrenci herhangi 11 haneli TCKN / 123
-Veri : data/ klasörü (db.json + belgeler) – güncelleme (unzip -o) data/'ya dokunmaz. Port: PORT=9090 sh baslat.sh
+BURS SİSTEMİ v6
 
-Öğrenci akışı (kilitli adımlar): Şartlar > Bilgilerim (ad, TC, anne/baba adı) > Belgeler > Form > Özet/Gönder
-- Her belgede kişinin adı-soyadı (veya TC) görünmeli; görünmezse/yanlış kişiyse belge KABUL EDİLMEZ.
-- e-Devlet belgeleri son 30 gün içinde olmalı. Adli sicil: öğrenci + anne + baba.
-- Gönder düğmesi yalnız her şey tamamsa çalışır (sunucu da denetler).
-Admin: Başvurular (filtre/sıralama: gelir, ev, araç, kardeş, not, demo/gerçek…) + Şartlar ve Puanlama (eleme şartları, ağırlıklar, kontenjan, listeyi onayla). “Örnek veri” demo başvuru ekler, “Demo sil” temizler.
+LOCALHOST (bilgisayar / Termux)
+  Termux : cd ~/storage/downloads && unzip -o BursSistemi.zip -d ~ && sh ~/BursSistemi/baslat.sh
+  Windows: zip'i aç, Baslat.bat'a çift tıkla
+  Linux/Mac: sh baslat.sh        Port değiştirmek için: PORT=9090 sh baslat.sh
+  Adres: http://localhost:8080
+  Güncelleme: yeni zip'i aynı komutla aç (unzip -o). data/ klasörüne (başvurular, belgeler) dokunulmaz.
 
-GitHub Pages demo (sunucusuz, veriler tarayicida): repo ana dizininde  git init && git add -A && git commit -m ilk && git branch -M main && git remote add origin https://github.com/KULLANICI/BursSistemi.git && git push -u origin main
-Sonra repo Settings > Pages > Source: GitHub Actions. Adres: https://KULLANICI.github.io/BursSistemi/  (demo giris: admin / 123, ogrenci: herhangi 11 haneli TCKN / 123)
+GITHUB PAGES (sunucusuz demo, veriler tarayıcıda)
+  İlk kurulum (repo ana dizini = BursSistemi klasörü):
+    git init && git add -A && git commit -m ilk && git branch -M main && git remote add origin https://github.com/KULLANICI/BursSistemi.git && git push -u origin main
+    Sonra repo Settings > Pages > Source: GitHub Actions
+  Sonraki her güncelleme (tek komut):
+    sh github-yukle.sh        (Windows: github-yukle.bat)
+  Adres: https://KULLANICI.github.io/BursSistemi/
+
+Demo giriş: yönetici admin / 123 (sabit, değiştirilemez)  |  öğrenci: herhangi 11 haneli TCKN / 123
+
+Öğrenci akışı: Şartlar > Kimlik (ad-soyad, T.C., sınıf, anne, baba) > Belgeler > Başvuru Formu (belgelerden otomatik dolar) > Özet/Gönder
+- Başvuru Formu: Word formundaki tüm sorular (kimlik, iletişim, eğitim, ekonomik durum, anne/baba, aile) belgelerden ÖNCE sorulur. Ad yazılırken son kelime soyad sayılır; yalnız ad yazılırsa öğrencinin soyadı kullanılır. Belgeler yüklenince yazdığınız cevapların üzerine yazılmaz.
+- Başvuru formu ayrıca yüklenmez.
+- Her belgede kişinin adı veya T.C. no görünmeli. e-Devlet belgeleri son 30 gün içinde olmalı. Adli sicil: öğrenci + anne + baba.
+- Belgeler toplu seçilebilir; hepsi paralel okunur, sonuç sonda özetlenir.
+
+- e-Devlet ekran görüntülerinde soyad gizli olabilir; belgede kişinin adı (veya T.C. no) görünmesi yeterli. Adı görünmeyen kaydırılmış ekranlar aynı türde tek belge varsa ona eklenir, değilse “Kime ait?” sorulur. Aynı belge iki kez yüklenirse atlanır.
+- Demo modunda yüklenen dosyalar tarayıcıda (IndexedDB) saklanır; yönetici panelinde açılır. Aynı tarayıcıdan öğrenci olarak yükleyip admin ile girin.
+
+- Yönetici: başvuru ayrıntısında kullanıcı adı, e-posta ve şifre görünür. Dışa aktarma: Excel (varsayılan), sağdaki oktan CSV. Puanlama ağırlıkları “Şartlar ve Puanlama” sayfasında açılır bölümdedir.
+- Demo: alttaki “Belge” sekmesine 10 kez basınca tüm adımlar açılır ve başvuru formuna gidilir; formda “Demo verisiyle doldur” düğmesi vardır.
+
+v7 NOTLARI
+- Kira kontratı (öğrenci + aile) ve 4A/4B/4C (öğrenci, anne, baba) artık koşulsuz zorunlu. Belge yoksa slottaki "Yok" düğmesi kaydı "yok" olarak yükler.
+- Belge sekmesine 10 kez basınca (demo VE gerçek sunucuda) tüm adımlar açılır, doğrudan Başvuru Formu'na geçer; eksik belgeyle de "Onaya Gönder" çalışır (yönetici panelinde "demo gönderim" etiketi).
+- Sunucu ayarları (ortam değişkeni): ADMIN_PW=şifre  DEMO_TAP=0 (10 tık kapanır)  AUTO_USER=0 (bilinmeyen TCKN otomatik açılmaz)
+  Örnek: ADMIN_PW=GucluSifre DEMO_TAP=0 PORT=8080 node server.js
+- İkametgâh adresi artık kesilmiyor (100 karakter sınırı kaldırıldı).
+- YKS: TYT/SAY/EA/SÖZ/DİL başarı sırası + yerleştirme puanı/sırası forma ve yönetici paneli/Excel'e eklendi.
+- Her yüklemeden hemen sonra başvuru kaydedilir; yönetici paneli 10 sn'de bir kendini yeniler. Demo verisi artık IndexedDB'de (kota dolmaz).
+- v8: Giriş ekranı düzeltildi: alanlar form içinde (tarayıcı otomatik doldurma/Enter uyumlu), açılıştaki oturum kontrolü yazılanları silmiyor, hatada TC/şifre kalıyor ve hata mesajı kutunun içinde görünüyor.

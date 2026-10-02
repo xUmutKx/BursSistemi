@@ -1,4 +1,3 @@
-/* Belge sınıflandırma + sahip tespiti + bilgi çıkarımı (tarayıcı ve Node'da çalışır) */
 (function (root) {
   const L = {};
   const N = s => (s || '').toLocaleUpperCase('tr-TR').replace(/İ/g, 'I').replace(/Ç/g, 'C').replace(/Ğ/g, 'G').replace(/Ö/g, 'O').replace(/Ş/g, 'S').replace(/Ü/g, 'U').replace(/Â/g, 'A').replace(/Î/g, 'I').replace(/Û/g, 'U');
@@ -7,36 +6,34 @@
   const EG = 'https://www.turkiye.gov.tr/';
   L.N = N; L.tcase = tcase;
   L.WN = { s: 'Öğrenci', m: 'Anne', f: 'Baba', a: 'Aile' }; const WN_ = L.WN;
-  // k: tür, w: kimler için (s öğrenci, m anne, f baba, a aile), icon, link, hint
   L.D = [
-    { k: 'form', t: 'İmzalı Başvuru Formu', w: 's', cat: 'Başvuru', icon: 'draw', d: 'Sistemden yazdırıp imzaladığınız form (taranmış/fotoğraf).', l: '', h: '2. adımdaki formu yazdırıp imzalayın.' },
     { k: 'foto', t: 'Vesikalık Fotoğraf', w: 's', cat: 'Başvuru', icon: 'photo_camera', d: '1 adet vesikalık fotoğraf.', l: '', h: '' },
-    { k: 'kimlik_on', t: 'Kimlik / Nüfus Cüzdanı – Ön Yüz', w: 's', cat: 'Kimlik', icon: 'badge', d: 'Kimlik kartının ön yüzü (fotokopi/fotoğraf).', l: '', h: '' },
-    { k: 'kimlik_ar', t: 'Kimlik / Nüfus Cüzdanı – Arka Yüz', w: 's', cat: 'Kimlik', icon: 'badge', d: 'Kimlik kartının arka yüzü.', l: '', h: '' },
-    { k: 'ikamet', t: 'Yerleşim Yeri (İkametgah) Belgesi', w: 's', cat: 'Kimlik', icon: 'home', d: 'e-Devlet barkodlu "Yerleşim Yeri ve Diğer Adres Belgesi".', l: EG + 'nvi-yerlesim-yeri-ve-diger-adres-belgesi-sorgulama', h: '' },
-    { k: 'sinav', t: 'ÖSYM TYT/AYT Sonuç Belgesi', w: 's', cat: 'Eğitim', icon: 'description', d: 'Sadece hazırlık / 1. sınıfa başlayanlar.', l: 'https://ais.osym.gov.tr/Sonuc/Listele', h: '' },
-    { k: 'yerles', t: 'ÖSYM Yerleştirme Sonucu', w: 's', cat: 'Eğitim', icon: 'workspace_premium', d: 'Yerleştirme puanı dahil (hazırlık / 1. sınıf).', l: 'https://ais.osym.gov.tr/Sonuc/Listele', h: '' },
-    { k: 'ogrenci', t: 'Güncel Öğrenci Belgesi', w: 's', cat: 'Eğitim', icon: 'school', d: 'e-Devlet (YÖK) barkodlu güncel öğrenci belgesi.', l: EG + 'yok-ogrenci-belgesi-sorgulama', h: '' },
-    { k: 'transkript', t: 'Transkript (Not Durum Belgesi)', w: 's', cat: 'Eğitim', icon: 'table_rows', d: 'Son dönem notları. 2026 hazırlık/1. sınıf başlayanlar hariç.', l: '', h: 'Üniversite öğrenci bilgi sisteminden alın.' },
-    { k: 'kyk', t: 'KYK Burs / Kredi Durumu', w: 's', cat: 'Burs', icon: 'payments', d: '"Öğrenim/Katkı Kredisi ve Burs Sorgulama" detay sayfası.', l: EG + 'kyk-ogrenim-katki-kredisi-ve-burs-sorgulama', h: '' },
-    { k: 'yurt', t: 'Yurt Belgesi', w: 's', cat: 'Barınma', icon: 'apartment', d: 'Yurtta kalıyorsanız kurum imzalı belge / e-Devlet yurt kaydı.', l: EG, h: 'e-Devlet > Gençlik ve Spor Bakanlığı > Yurt Kayıt İşlemleri' },
-    { k: 'kira', t: 'Kira Kontratı (öğrenci)', w: 's', cat: 'Barınma', icon: 'key', d: 'Kiralık evde kalıyorsanız kontrat fotokopisi.', l: '', h: '' },
-    { k: 'kira_aile', t: 'Kira Kontratı (ailenin evi)', w: 'a', cat: 'Barınma', icon: 'key', d: 'Ailenin oturduğu ev kiraysa.', l: '', h: '' },
-    { k: 'nufus', t: 'Vukuatlı Nüfus Kayıt Örneği', w: 'a', cat: 'Aile', icon: 'family_restroom', d: 'Tüm aile bireyleri (anne/baba dökümü). e-Devlet.', l: EG, h: 'e-Devlet > Nüfus ve Vatandaşlık > Nüfus Kayıt Örneği (Vukuatlı, tüm aile)' },
-    { k: 'tescil', t: 'SGK Tescil ve Hizmet Dökümü', w: 'mf', cat: 'SGK', icon: 'work', d: '"Tüm SGK Hizmet Dökümü" işaretli barkodlu belge.', l: EG + 'sgk-tescil-ve-hizmet-dokumu', h: '' },
-    { k: 'a4a', t: '4A Emekli Aylık Bilgisi', w: 'smf', cat: 'SGK', icon: 'account_balance_wallet', d: 'Kaydı yoksa “bulunamadı” ekranı da zorunlu.', l: EG + '4a-emekli-aylik-bilgisi', h: '' },
-    { k: 'a4b', t: '4B Emekli Aylık Bilgisi', w: 'smf', cat: 'SGK', icon: 'account_balance_wallet', d: 'Kaydı yoksa “bulunamadı” ekranı da zorunlu.', l: EG + '4b-emekli-aylik-bilgisi', h: '' },
-    { k: 'a4c', t: '4C Emekli Aylık Bilgisi', w: 'smf', cat: 'SGK', icon: 'account_balance_wallet', d: 'Kaydı yoksa “bulunamadı” ekranı da zorunlu.', l: EG + '4c-emekli-aylik-bilgisi', h: '' },
-    { k: 'bordro', t: 'Maaş Bordrosu', w: 'mf', cat: 'Gelir', icon: 'receipt_long', d: 'Çalışan anne/baba için güncel e-bordro / işyeri bordrosu.', l: EG + 'e-bordro-sorgulama', h: '' },
-    { k: 'vergi', t: 'e-Vergi Levhası', w: 'mf', cat: 'Gelir', icon: 'request_quote', d: 'Yoksa “levha bulunamaz” ekranı zorunlu.', l: EG + 'e-vergi-levhası-sorgulama', h: '' },
-    { k: 'tapu', t: 'Tapu / Kadastro Taşınmaz Bilgileri', w: 'smf', cat: 'Mal Varlığı', icon: 'location_on', d: 'İsim ve taşınmaz listesi görünen ilk sayfa. Kayıt yoksa o ekran.', l: EG + 'tapu-bilgileri-sorgulama', h: '' },
-    { k: 'arac', t: 'Tescilli Araç Sorgulama', w: 'smf', cat: 'Mal Varlığı', icon: 'directions_car', d: 'İsim görünen ekran görüntüsü. Araç yoksa “bulunamamıştır” ekranı.', l: EG + 'emniyet-adima-tescilli-arac-sorgulama', h: '' },
-    { k: 'adli', t: 'Adli Sicil Kaydı', w: 'smf', cat: 'Kimlik', icon: 'balance', d: 'e-Devlet barkodlu adli sicil kaydı. Kişinin adı-soyadı görünmeli.', l: EG, h: 'e-Devlet > Adalet Bakanlığı > Adli Sicil Kaydı Sorgulama' }
+    { k: 'kimlik_on', t: 'Kimlik / Nüfus Cüzdanı – Ön Yüz', w: 's', cat: 'Kimlik', icon: 'badge', d: 'Kimlik kartının ön yüzü; ad-soyad ve T.C. no okunur olmalı.', l: '', h: '' },
+    { k: 'kimlik_ar', t: 'Kimlik / Nüfus Cüzdanı – Arka Yüz', w: 's', cat: 'Kimlik', icon: 'badge', d: 'Kimlik kartının arka yüzü (anne-baba adı görünmeli).', l: '', h: '' },
+    { k: 'ikamet', t: 'Yerleşim Yeri (İkametgah) Belgesi', w: 's', cat: 'Kimlik', icon: 'home', d: 'e-Devlet barkodlu Yerleşim Yeri ve Diğer Adres Belgesi.', l: EG + 'nvi-yerlesim-yeri-ve-diger-adres-belgesi-sorgulama', h: 'e-Devlet: Yerleşim Yeri (İkametgâh) ve Diğer Adres Belgesi Sorgulama' },
+    { k: 'sinav', t: 'ÖSYM TYT/AYT Sonuç Belgesi', w: 's', cat: 'Eğitim', icon: 'description', d: 'Hazırlık / 1. sınıf başlayanlar için.', l: EG + 'osym-aday-islemleri-sistemi-sso', h: 'ÖSYM Aday İşlemleri > Sınav Sonuç Belgesi' },
+    { k: 'yerles', t: 'ÖSYM Yerleştirme Sonucu', w: 's', cat: 'Eğitim', icon: 'workspace_premium', d: 'Yerleştirme puanı görünen belge (hazırlık / 1. sınıf).', l: EG + 'osym-aday-islemleri-sistemi-sso', h: 'ÖSYM Aday İşlemleri > Yerleştirme Sonuç Belgesi' },
+    { k: 'ogrenci', t: 'Güncel Öğrenci Belgesi', w: 's', cat: 'Eğitim', icon: 'school', d: 'e-Devlet (YÖK) barkodlu güncel öğrenci belgesi.', l: EG + 'yok-ogrenci-belgesi-sorgulama', h: 'e-Devlet: Öğrenci Belgesi Sorgulama (YÖK)' },
+    { k: 'transkript', t: 'Transkript (Not Durum Belgesi)', w: 's', cat: 'Eğitim', icon: 'table_rows', d: 'Son dönem notlarının olduğu transkript (hazırlık / 1. sınıf hariç).', l: EG + 'yuksekogretim-kurulu-transkript-belgesi-sorgulama', h: 'e-Devlet: Transkript Belgesi Sorgulama (YÖK) veya üniversite öğrenci bilgi sistemi' },
+    { k: 'kyk', t: 'KYK Burs / Kredi Durumu', w: 's', cat: 'Burs', icon: 'payments', d: 'Kredi/Burs Durum Belgesi; kayıt yoksa “bulunamadı” ekranı.', l: EG + 'genclik-ve-spor-kredi-burs-durum-belgesi-sorgulama', h: 'e-Devlet: Kredi/Burs Durum Belgesi Sorgulama (GSB)' },
+    { k: 'yurt', t: 'Yurt Belgesi', w: 's', cat: 'Barınma', icon: 'apartment', d: 'Yurtta kalanlar için kurum imzalı belge veya e-Devlet yurt kaydı.', l: EG + 'gsb-yurt-basvuru-sonucu-sorgulama', h: 'e-Devlet: Gençlik ve Spor Bakanlığı > Yurt işlemleri' },
+    { k: 'kira', t: 'Kira Kontratı (öğrenci)', w: 's', cat: 'Barınma', icon: 'key', d: 'Kiracı adı görünen kontrat. Yoksa “Yok” düğmesiyle beyan edin.', l: '', h: '' },
+    { k: 'kira_aile', t: 'Kira Kontratı (ailenin evi)', w: 'a', cat: 'Barınma', icon: 'key', d: 'Ailenin oturduğu ev kiraysa kiracı adı görünmeli. Yoksa “Yok” düğmesiyle beyan edin.', l: '', h: '' },
+    { k: 'nufus', t: 'Vukuatlı Nüfus Kayıt Örneği', w: 'a', cat: 'Aile', icon: 'family_restroom', d: 'Tüm aile bireylerinin göründüğü e-Devlet nüfus kayıt örneği.', l: EG + 'nvi-nufus-kayit-ornegi-belgesi-sorgulama', h: 'e-Devlet: Nüfus Kayıt Örneği Belgesi Sorgulama (tüm aile / vukuatlı)' },
+    { k: 'tescil', t: 'SGK Tescil ve Hizmet Dökümü', w: 'mf', cat: 'SGK', icon: 'work', d: '“Tüm SGK Hizmet Dökümü” seçili, barkodlu belge.', l: EG + 'sgk-tescil-ve-hizmet-dokumu?barkodlu=BelgeOlustur', h: 'e-Devlet: SGK Tescil ve Hizmet Dökümü' },
+    { k: 'a4a', t: '4A Emekli Aylık Bilgisi', w: 'smf', cat: 'SGK', icon: 'account_balance_wallet', d: 'Zorunlu. Kayıt yoksa “bulunamadı” ekranını yükleyin ya da “Yok” düğmesiyle beyan edin.', l: EG + '4a-emekli-aylik-bilgisi', h: 'e-Devlet: 4A Emekli Aylık Bilgisi' },
+    { k: 'a4b', t: '4B Emekli Aylık Bilgisi', w: 'smf', cat: 'SGK', icon: 'account_balance_wallet', d: 'Zorunlu. Kayıt yoksa “bulunamadı” ekranını yükleyin ya da “Yok” düğmesiyle beyan edin.', l: EG + '4b-emekli-aylik-bilgisi', h: 'e-Devlet: 4B Emekli Aylık Bilgisi' },
+    { k: 'a4c', t: '4C Emekli Aylık Bilgisi', w: 'smf', cat: 'SGK', icon: 'account_balance_wallet', d: 'Zorunlu. Kayıt yoksa “bulunamadı” ekranını yükleyin ya da “Yok” düğmesiyle beyan edin.', l: EG + '4c-emekli-aylik-bilgisi', h: 'e-Devlet: 4C Emekli Aylık Bilgisi' },
+    { k: 'bordro', t: 'Maaş Bordrosu', w: 'mf', cat: 'Gelir', icon: 'receipt_long', d: 'Çalışan anne/baba için güncel bordro.', l: EG + 'e-bordro-sorgulama', h: 'e-Devlet e-Bordro veya işyeri bordrosu' },
+    { k: 'vergi', t: 'e-Vergi Levhası', w: 'mf', cat: 'Gelir', icon: 'request_quote', d: 'Levha yoksa “levha bulunamadı” ekranı zorunlu.', l: '', h: 'e-Devlet arama kutusuna “Vergi Levhası” yazın (Gelir İdaresi Başkanlığı)' },
+    { k: 'tapu', t: 'Tapu / Kadastro Taşınmaz Bilgileri', w: 'smf', cat: 'Mal Varlığı', icon: 'location_on', d: 'İsim ve taşınmaz listesi görünen sayfa; kayıt yoksa o ekran.', l: EG + 'tapu-bilgileri-sorgulama', h: 'e-Devlet: Tapu Bilgileri Sorgulama' },
+    { k: 'arac', t: 'Tescilli Araç Sorgulama', w: 'smf', cat: 'Mal Varlığı', icon: 'directions_car', d: 'İsim görünen ekran; araç yoksa “bulunamamıştır” ekranı.', l: EG + 'emniyet-adima-tescilli-arac-sorgulama?hizmet=ekrani', h: 'e-Devlet: Adıma Tescilli Araç Sorgulama' },
+    { k: 'adli', t: 'Adli Sicil Kaydı', w: 'smf', cat: 'Kimlik', icon: 'balance', d: 'e-Devlet barkodlu adli sicil kaydı; adı-soyadı görünmeli.', l: EG + 'adli-sicil-kaydi', h: 'e-Devlet: Adli Sicil Kaydı Sorgulama' }
   ];
   L.SL = L.D.flatMap(d => [...d.w].map(w => Object.assign({}, d, { w, id: d.k + ':' + w })));
+  L.known = k => L.D.some(x => x.k === k);
   L.cats = [...new Set(L.D.map(d => d.cat))];
 
-  /* ----- PDF.js öğelerinden satır oluştur (sütun boşluğu = 2 boşluk) ----- */
   L.lines = (items, tolF) => {
     const its = items.filter(i => i.str && i.str.trim()).map(i => ({ i, y: i.transform[5], h: Math.abs(i.transform[3]) || 8 })).sort((a, b) => b.y - a.y);
     const rows = []; let cur = null;
@@ -52,39 +49,51 @@
     }).join('\n');
   };
 
-  /* ----- Sınıflandırma ----- */
   const R = [
-    ['form', /BURS BASVURU FORMU/, 9], ['ikamet', /YERLESIM YERI VE DIGER ADRES/, 9], ['yerles', /YERLESTIRME SONUCLARI/, 10],
-    ['sinav', /YKS\)? SONUCLARI|TYT TESTLERINDEKI/, 8], ['ogrenci', /OGRENCI BELGESI/, 9], ['transkript', /TRANSKRIPT/, 9],
-    ['kyk', /KREDI\/BURS DURUM|KATKI KREDISI VE BURS|KREDI KREDISI|KREDI NUMARASI BULUNAMADI/, 9], ['yurt', /YURT KAYIT ISLEMLERI|YURT ADI|YURT BELGESI/, 8],
-    ['nufus', /NUFUS KAYIT ORNEGI/, 9], ['tescil', /SIGORTALILIK TESCIL|TESCIL VE HIZMET/, 9], ['vergi', /VERGI LEVHASI|VERGI KIMLIK NUMARALI MUKELLEF/, 9],
+    ['ikamet', /YERLESIM YERI VE DIGER ADRES/, 9], ['yerles', /YERLESTIRME SONUCLARI/, 10],
+    ['sinav', /YKS\)? SONUCLARI|TYT TESTLERINDEKI|SINAV SONUC BELGESI/, 8], ['ogrenci', /OGRENCI BELGESI/, 9], ['transkript', /TRANSKRIPT|TRANSCRIPT|NOT DURUM BELGESI/, 9],
+    ['kyk', /KREDI\/BURS DURUM|KATKI KREDISI VE BURS|KREDI KREDISI|KREDI NUMARASI BULUNAMADI|BURS DURUM BELGESI/, 9], ['yurt', /YURT KAYIT ISLEMLERI|YURT ADI|YURT BELGESI|YURT BASVURU SONUC/, 8],
+    ['nufus', /NUFUS KAYIT ORNEGI|VUKUATLI/, 9], ['tescil', /SIGORTALILIK TESCIL|TESCIL VE HIZMET|HIZMET DOKUMU/, 9], ['vergi', /VERGI LEVHASI|VERGI KIMLIK NUMARALI MUKELLEF/, 9],
     ['tapu', /TAPU ?BILGILERI ?SORGULAMA|TASINMAZ LISTESI|TASINMAZ BILGISI|TAKBIS/, 8], ['arac', /TESCILLI ARAC|ARAC BILGILERI|ARACIN PLAKASI|PLAKA/, 8],
     ['bordro', /BORDRO|BRUT UCRET|NET UCRET/, 7], ['kira', /KIRA SOZLESMESI|KIRA KONTRATI|KIRAYA VEREN|KIRACI/, 8], ['adli', /ADLI SICIL/, 8],
     ['kimlik', /KIMLIK KARTI|NUFUS CUZDANI|SURNAME|GIVEN NAME|<<</, 6]
   ];
   L.classify = U => {
     let b = null;
+    if (/BURS BASVURU FORMU|BURSU ICIN GEREKLI BILGILER/.test(U)) return null;
     R.forEach(([k, re, w]) => { if (re.test(U) && (!b || w > b.s)) b = { k, s: w }; });
-    const m = U.match(/\b4\s?([ABC8])\s?EMEKLI\s?AYLIK/);
+    const m = U.match(/\b4\s?[\/\-]?\s?([ABC8])\s?EMEKLI\s?AYLIK/);
     if (m) b = { k: 'a4' + (m[1] === '8' ? 'b' : m[1].toLowerCase()), s: 10 };
+    if (!b || b.s < 10) { const g4 = U.match(/\b4\s*[\/\-]?\s*([ABC])\s*GUVENCESINE SAHIP EMEKLILER/); if (g4) b = { k: 'a4' + g4[1].toLowerCase(), s: 10 }; }
     if (b && b.k === 'kimlik') b.k = /<<|ANNE ADI|MOTHER|BABA ADI|FATHER|SERI NO|DOCUMENT NO/.test(U) && !/SURNAME|SOYADI/.test(U.slice(0, 400)) ? 'kimlik_ar' : 'kimlik_on';
     return b;
   };
 
-  /* ----- Kişiler (form verisinden) ----- */
   const nn = s => N(s).replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
-  L.people = F => { const f = s => nn(s).split(' ')[0]; return { s: { n: nn(F.ad), tc: F.tc, f: f(F.ad) }, m: { n: nn(F['anne.ad']), tc: F['anne.tc'], f: f(F['anne.ad']) }, f: { n: nn(F['baba.ad']), tc: F['baba.tc'], f: f(F['baba.ad']) } }; };
+  L.people = F => {
+    const sy = nn(F.ad).split(' ').filter(x => x.length > 1).pop() || '';
+    const full = s => { const t = nn(s).split(' ').filter(Boolean); return t.length === 1 && sy ? t[0] + ' ' + sy : t.join(' '); };
+    const f = s => nn(s).split(' ')[0];
+    const sh = s => nn(s).split(' ').filter(Boolean).length < 2;
+    return { s: { n: nn(F.ad), tc: F.tc, f: f(F.ad), short: false }, m: { n: full(F['anne.ad']), tc: F['anne.tc'], f: f(F['anne.ad']), short: sh(F['anne.ad']) }, f: { n: full(F['baba.ad']), tc: F['baba.tc'], f: f(F['baba.ad']), short: sh(F['baba.ad']) } };
+  };
   const lev = (a, b) => { const m = a.length, n = b.length; let p = Array.from({ length: n + 1 }, (_, j) => j); for (let i = 1; i <= m; i++) { const c = [i]; for (let j = 1; j <= n; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = c; } return p[n]; };
-  /* Ad-soyad belgede geçiyor mu? (OCR hatasına 1 harf tolerans) */
   L.nameHit = (U, nm) => {
     const toks = (nm || '').split(' ').filter(t => t.length > 1); if (toks.length < 2) return false;
     const words = [...new Set(U.split(/[^A-Z]+/).filter(w => w.length > 1))];
     const h = toks.map(t => words.includes(t) || (t.length >= 5 && words.some(w => Math.abs(w.length - t.length) <= 1 && lev(w, t) <= 1))), n = h.filter(Boolean).length;
     return n === toks.length || (toks.length >= 3 && n >= toks.length - 1 && h[toks.length - 1]);
   };
+  L.givenHit = (zone, nm) => {
+    const toks = (nm || '').split(' ').filter(t => t.length > 1); if (!toks.length) return false;
+    const words = [...new Set(zone.split(/[^A-Z]+/).filter(w => w.length > 1))];
+    const hit = t => words.some(w => w === t || (t.length >= 4 && (w.includes(t) || (Math.abs(w.length - t.length) <= 1 && lev(w, t) <= 1) || (t.length >= 7 && Math.abs(w.length - t.length) <= 2 && lev(w, t) <= 2))));
+    const giv = toks.length > 1 ? toks.slice(0, -1) : toks;
+    return giv.some(hit) || (toks.length > 1 && hit(toks[toks.length - 1]) && giv.every(t => t.length < 3));
+  };
   const hasTc = (U, tc) => !!tc && new RegExp('(^|\\D)' + tc + '(\\D|$)').test(U);
-  L.ownerOf = (U, F, allowed) => {
-    const p = L.people(F), head = U.slice(0, 4000), al = allowed || 'smf';
+  L.ownerOf = (U, F, allowed, src) => {
+    const p = L.people(F), head = src === 'img' ? U : U.slice(0, 4000), al = allowed || 'smf';
     for (const t of head.match(/\b\d{11}\b/g) || []) for (const w of 'smf') if (al.includes(w) && p[w].tc && p[w].tc === t) return w;
     const caps = [];
     for (const m of head.matchAll(/&\s*([A-Z][A-Z ]{2,40})/g)) caps.push(m[1]);
@@ -93,13 +102,14 @@
     for (const m of head.matchAll(/AD, SOYAD\s*:\s*([A-Z ,]{3,40})/g)) caps.push(m[1].replace(',', ''));
     for (const s of caps) for (const w of 'smf') if (al.includes(w) && L.nameHit(s, p[w].n)) return w;
     for (const w of 'smf') if (al.includes(w) && L.nameHit(head, p[w].n)) return w;
+    const zone = head, cand = [...'smf'].filter(w => al.includes(w) && L.givenHit(zone, p[w].n));
+    if (cand.length === 1) return cand[0];
     return null;
   };
-  /* Belge doğru kişiye mi ait? İsim (veya T.C.) belgede/ekranda görünmüyorsa 'bad' = kabul edilmez */
-  L.verify = (U, F, k, w) => {
-    const p = L.people(F), head = U.slice(0, 4000), ck = [];
+  L.verify = (U, F, k, w, src) => {
+    const p = L.people(F), head = src === 'img' ? U : U.slice(0, 4000), ck = [];
     if (k === 'foto') return ck;
-    const has = x => hasTc(head, p[x].tc) ? 'T.C. no' : (L.nameHit(head, p[x].n) ? 'isim' : '');
+    const has = x => hasTc(head, p[x].tc) ? 'T.C. no' : L.nameHit(head, p[x].n) ? 'isim' : (L.givenHit(head, p[x].n) ? 'ad' : '');
     const nm = { s: F.ad, m: F['anne.ad'], f: F['baba.ad'] }, lab = x => WN_[x] + (p[x].n ? ' (' + String(nm[x] || '').trim() + ')' : ''), bad = m => ck.push({ t: 'bad', m }), ok = m => ck.push({ t: 'ok', m });
     if (k === 'kimlik_ar') {
       if (has('s')) ok('Öğrenci kimliği doğrulandı (' + has('s') + ')');
@@ -108,9 +118,9 @@
       return ck;
     }
     if (k === 'kira_aile') { const x = 'smf'.split('').find(has); x ? ok(lab(x) + ' adı doğrulandı') : bad('Kira kontratında öğrenci/anne/baba adı görünmüyor – kabul edilmez'); return ck; }
-    const need = (k === 'nufus' || k === 'form') ? 's' : w;
+    const need = k === 'nufus' ? 's' : w;
     if (!'smf'.includes(need)) return ck;
-    if (!p[need].n) { bad(WN_[need] + ' adı-soyadı “Bilgilerim” adımında girilmemiş'); return ck; }
+    if (!p[need].n) { bad(WN_[need] + ' adı “Kimlik” adımında girilmemiş'); return ck; }
     const h = has(need);
     if (h) {
       ok(lab(need) + ' doğrulandı (' + h + ')');
@@ -118,16 +128,15 @@
       if (p[need].tc && ids.length && !ids.includes(p[need].tc) && ids.some(t => 'smf'.split('').some(x => x !== need && p[x].tc === t))) bad('Belgedeki T.C. no ' + WN_[need] + ' ile uyuşmuyor');
     } else {
       const o = 'smf'.split('').find(x => x !== need && has(x));
-      bad(o ? 'Bu belge ' + lab(o) + ' adına görünüyor; ' + WN_[need] + ' adına olmalı' : lab(need) + ' adı-soyadı belgede görünmüyor – ekran görüntüsünde isim kırpılmış/kapalı olabilir; isim görünmeyen belge kabul edilmez');
+      bad(o ? 'Bu belge ' + lab(o) + ' adına görünüyor; ' + WN_[need] + ' adına olmalı' : lab(need) + ' adı belgede görünmüyor – ekran görüntüsünde ad kırpılmış olabilir; adı görünmeyen belge kabul edilmez');
     }
     return ck;
   };
 
-  /* ----- Yama (patch) sistemi: form alanlarını otomatik doldurma ----- */
   L.apply = (F, patches) => {
     F._a = F._a || {};
     patches.forEach(p => {
-      if (p.t === 'set') { if (p.val && (!F[p.key] || F._a[p.key])) { F[p.key] = p.val; F._a[p.key] = p.src; } }
+      if (p.t === 'set') { const short = /^(anne|baba)\.ad$/.test(p.key) && F[p.key] && F[p.key].trim().split(/\s+/).length < 2; if (p.val && (!F[p.key] || F._a[p.key] || short)) { F[p.key] = p.val; F._a[p.key] = p.src; } }
       else if (p.t === 'line') { const Ls = (F[p.key] || '').split('\n').filter(l => l && !l.startsWith(p.tag + ':')); Ls.push(p.tag + ': ' + p.txt); F[p.key] = Ls.join('\n'); F._a[p.key] = p.src; }
       else if (p.t === 'list') { if (!F[p.key] || F._a[p.key]) { F[p.key] = p.val; F._a[p.key] = p.src; } }
     });
@@ -171,7 +180,26 @@
     } else if (!stu) ck.push({ t: 'warn', m: 'Bu nüfus kaydında öğrencinin satırı bulunamadı' });
   }
 
-  /* ----- Ana çıkarım ----- */
+
+  L.yks = U => {
+    const r = {}, lab = [['tyt', /^TYT\b/], ['say', /^(SAYISAL|SAY)\b/], ['ea', /^(ESIT AGIRLIK|EA)\b/], ['soz', /^(SOZEL|SOZ)\b/], ['dil', /^(YABANCI DIL|DIL)\b/]];
+    U.split('\n').forEach(l => {
+      const t = l.trim().replace(/^[^A-Z]+/, '');
+      lab.forEach(([k, re]) => {
+        if (r[k] || !re.test(t)) return;
+        const n = t.replace(re, '').match(/\d[\d.,]*/g) || [], pu = n.find(x => /^\d{2,3}[.,]\d+$/.test(x)), si = n.filter(x => x !== pu).find(x => /^\d{1,3}(\.\d{3})+$|^\d{1,7}$/.test(x));
+        if (pu && si) r[k] = { p: pu, s: si };
+      });
+    });
+    return r;
+  };
+  const YKSK = { tyt: 'yksTyt', say: 'yksSay', ea: 'yksEa', soz: 'yksSoz', dil: 'yksDil' };
+  function yksPatch(U, P, info, src) {
+    const y = L.yks(U), ks = Object.keys(y);
+    ks.forEach(k => P.push({ t: 'set', key: YKSK[k], val: y[k].s + '. sıra (' + y[k].p + ' puan)', src }));
+    if (ks.length) info.push(ks.map(k => k.toUpperCase() + ': ' + y[k].s + '. sıra').join(' · '));
+  }
+
   function extract(k, w, raw, U, F, P, info, ck) {
     const pre = w === 'm' ? 'anne' : 'baba', neg = NEG.test(U), src = L.D.find(d => d.k === k).t, head = raw.slice(0, 700);
     const tc = g(head, /K[İI]ML[İI]K\s*(?:NO|Numarası)?\s*:?\s*(\d{11})/i) || g(head, /\b(\d{11})\b/);
@@ -188,11 +216,13 @@
       if (/^\s*1/.test(sn)) P.push({ t: 'set', key: 'gno', val: 'Yok (1. sınıf, henüz not ortalaması yok)', src });
       info.push(tcase(ad) + ' – ' + sn + ' – ' + g(raw, /Öğrencilik Durumu\s*:\s*([^\n]+)/));
     }
-    if (k === 'ikamet') { const a = g(raw, /Adres Tipi[\s\S]*?Yurt\s?içi\s+\d+\s+([\s\S]+?)AÇIKLAMALAR/i).replace(/(^|\n)\s*Adresi\s+/g, '$1').replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim(); P.push({ t: 'set', key: 'adres', val: a, src }); info.push(a.slice(0, 100)); }
+    if (k === 'ikamet') { const a = g(raw, /Adres Tipi[\s\S]*?Yurt\s?içi\s+\d+\s+([\s\S]+?)AÇIKLAMALAR/i).replace(/(^|\n)\s*Adresi\s+/g, '$1').replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim(); P.push({ t: 'set', key: 'adres', val: a, src }); info.push(a); }
     if (k === 'adli') { const d = g(raw, /DOĞUM YERİ \/ TARİHİ\s*:\s*([^\n]+)/i); if (d) P.push({ t: 'set', key: 'dogum', val: tcase(d.replace(/\s*\/\s*/, ' / ')).replace(/ \/ /, ' / '), src }); info.push(neg || /KAYDI YOKTUR/.test(U) ? 'Adli sicil kaydı yok' : 'Adli sicil kaydı var – inceleyin'); }
     if (k === 'transkript') { const no = g(raw, /Öğrenci No\s*:\s*(\d+)/), n = g(raw, /Genel Not Ortalaması\s*[:\-]?\s*(\d[\d.,]*)/i); P.push({ t: 'set', key: 'okulno', val: no, src }); if (n && parseFloat(n.replace(',', '.')) > 0) P.push({ t: 'set', key: 'gno', val: n, src }); info.push('Öğrenci no ' + no + (n ? ' – GNO ' + n : '')); }
-    if (k === 'yerles') { P.push({ t: 'set', key: 'fakulte', val: tcase((g(raw, /([A-ZÇĞİÖŞÜ ]+ÜNİVERSİTESİ)/) + ' – ' + g(raw, /([A-ZÇĞİÖŞÜ ]*FAKÜLTESİ)/)).trim()), src }); info.push('Yerleşme puanı ' + g(raw, /Yerleşme Puanı\s+([\d,]+)/) + ' – ' + tcase(g(raw, /Yerleşme Türü\s+([^\n]+)/))); }
-    if (k === 'sinav') info.push('YKS ' + g(raw, /Sınav Tarihi\s+([^\n]+)/));
+    if (k === 'yerles') { P.push({ t: 'set', key: 'fakulte', val: tcase((g(raw, /([A-ZÇĞİÖŞÜ ]+ÜNİVERSİTESİ)/) + ' – ' + g(raw, /([A-ZÇĞİÖŞÜ ]*FAKÜLTESİ)/)).trim()), src }); { const yp = g(raw, /Yerleşme Puanı\s*[:\-]?\s*([\d.,]+)/), ys = g(raw, /Ba[şs]ar[ıi]\s*S[ıi]ras[ıi]\s*[:\-]?\s*([\d.]+)/i) || g(raw, /S[ıi]ralama(?:s[ıi])?\s*[:\-]?\s*([\d.]{2,})/i);
+      if (yp) P.push({ t: 'set', key: 'yerlesPuan', val: yp, src }); if (ys) P.push({ t: 'set', key: 'yerlesSira', val: ys + '. sıra', src });
+      yksPatch(U, P, info, src); info.push('Yerleşme puanı ' + yp + (ys ? ' – başarı sırası ' + ys : '') + ' – ' + tcase(g(raw, /Yerleşme Türü\s+([^\n]+)/))); } }
+    if (k === 'sinav') { info.push('YKS ' + g(raw, /Sınav Tarihi\s+([^\n]+)/)); yksPatch(U, P, info, src); }
     if (k === 'kyk' && neg) { P.push({ t: 'set', key: 'gecmisBurs', val: 'Hayır', src }, { t: 'set', key: 'kamuBurs', val: 'Yok (KYK kredi/burs yok)', src }); info.push('KYK kredi/burs almıyor'); }
     if (k === 'yurt') { const y = g(raw, /Yurt Adı\s+([^\n]+)/i) || g(raw, /Yurt Adı\s*[:\-]?\s*([A-ZÇĞİÖŞÜa-zçğıöşü\. ]+)/); if (y) { P.push({ t: 'set', key: 'yurt', val: tcase(y), src }, { t: 'set', key: 'ailedeMi', val: 'Hayır', src }); info.push('Yurt: ' + tcase(y)); } }
     if (k === 'tapu') {
@@ -217,11 +247,13 @@
   L.forced = (text, F, k, w) => { const raw = text || '', P = [], info = [], ck = []; extract(k, w, raw, N(raw), F, P, info, ck); return { patches: P, info, ck }; };
   const FRESH = ['ikamet', 'ogrenci', 'kyk', 'tescil', 'a4a', 'a4b', 'a4c', 'nufus', 'tapu', 'arac', 'vergi', 'yurt', 'adli'];
   const DT = '(\\d{2}[./]\\d{2}[./]\\d{4})';
+  const MO = { OCAK: 1, SUBAT: 2, MART: 3, NISAN: 4, MAYIS: 5, HAZIRAN: 6, TEMMUZ: 7, AGUSTOS: 8, EYLUL: 9, EKIM: 10, KASIM: 11, ARALIK: 12 };
   L.docDate = (raw, U, src) => {
-    const m = U.match(new RegExp(DT + '\\s+TARIHINDE\\s+ALINMI')) || U.match(new RegExp('YER\\s*/\\s*TARIH\\s*:[^\\n]*?' + DT)) || U.match(new RegExp('(?:BELGE|SORGU|OLUSTURMA|URETIM|DUZENLEME|BASKI|YAZDIRMA|ONAY)\\s+TARIHI?\\s*(?:/\\s*SAATI?)?\\s*[:\\-]?\\s*' + DT)) || U.match(new RegExp(DT + '\\s+\\d{2}:\\d{2}')) || (src !== 'img' ? raw.slice(0, 350).match(new RegExp(DT)) : null);
+    const tm = U.match(/(\d{1,2})\s+(OCAK|SUBAT|MART|NISAN|MAYIS|HAZIRAN|TEMMUZ|AGUSTOS|EYLUL|EKIM|KASIM|ARALIK)\s+(20\d{2})(?:\s+\d{1,2}:\d{2})?\s+ITIBARIYLA/) || U.match(/(\d{1,2})\s+(OCAK|SUBAT|MART|NISAN|MAYIS|HAZIRAN|TEMMUZ|AGUSTOS|EYLUL|EKIM|KASIM|ARALIK)\s+(20\d{2})\s+\d{1,2}:\d{2}/);
+    if (tm) return String(tm[1]).padStart(2, '0') + '.' + String(MO[tm[2]]).padStart(2, '0') + '.' + tm[3];
+    const m = U.match(new RegExp(DT + '\\s+TARIHINDE\\s+ALINMI')) || U.match(new RegExp('YER\\s*/\\s*TARIH\\s*:[^\\n]*?' + DT)) || U.match(new RegExp('(?:BELGE|SORGU|OLUSTURMA|URETIM|DUZENLEME|BASKI|YAZDIRMA|ONAY)\\s+TARIHI?\\s*(?:/\\s*SAATI?)?\\s*[:\\-]?\\s*' + DT)) || U.match(new RegExp(DT + '\\s+\\d{2}:\\d{2}')) || (src !== 'img' ? raw.slice(0, 900).match(new RegExp(DT)) : null);
     return m ? m[1] : '';
   };
-  /* ----- Belge analizi (force = {k,w}: kullanıcı belirli kutuya yükledi / elle sahip seçti) ----- */
   L.analyze = (text, F, srcType, now, force) => {
     F = F || {}; const raw = text || '', U = N(raw), ck = [], info = [], P = []; now = now || Date.now();
     let c;
@@ -230,7 +262,11 @@
       c = L.classify(U);
       if (force) {
         const same = c && (c.k === force.k || (/^kimlik/.test(c.k) && /^kimlik/.test(force.k)));
-        if (!same) return { k: force.k, w: force.w, ck: [{ t: 'bad', m: 'Bu belge “' + (c ? L.D.find(d => d.k === c.k).t : 'tanınmayan bir belge') + '” gibi görünüyor, “' + L.D.find(d => d.k === force.k).t + '” değil!' }], info, patches: [] };
+        if (c && !same) return { k: force.k, w: force.w, ck: [{ t: 'bad', m: 'Bu belge “' + L.D.find(d => d.k === c.k).t + '” gibi görünüyor, “' + L.D.find(d => d.k === force.k).t + '” değil!' }], info, patches: [] };
+        if (!c) {
+          if (U.replace(/[^A-Z0-9]/g, '').length < 25) return { k: force.k, w: force.w, ck: [{ t: 'bad', m: 'Belgeden metin okunamadı – net ve tam görüntü yükleyin' }], info, patches: [] };
+          ck.push({ t: 'warn', m: 'Belge türü içerikten doğrulanamadı – doğru belge olduğundan emin olun' });
+        }
         c = { k: force.k, s: 99 };
       } else if (!c && srcType === 'img' && U.replace(/[^A-Z0-9]/g, '').length < 25) c = { k: 'foto', s: 1 };
     }
@@ -240,70 +276,65 @@
     else if (c.k === 'nufus' || c.k === 'kira_aile') w = 'a';
     else if (al.length === 1) w = al;
     else {
-      w = L.ownerOf(U, F, al);
+      w = L.ownerOf(U, F, al, srcType);
       if (!w && c.k === 'tescil') { const cs = (U.match(/CINSIYET\s*:\s*(KADIN|ERKEK)/) || [])[1]; if (cs) w = cs === 'KADIN' ? 'm' : 'f'; }
     }
-    if (!w) { w = '?'; ck.push({ t: 'bad', m: 'Belgede öğrenci/anne/baba adı-soyadı bulunamadı – isim görünmeyen belge kabul edilmez (ekran görüntüsünde isim kırpılmamalı). Bilgilerim’deki adı kontrol edin veya tam belgeyi yükleyin' }); }
-    else ck.push(...L.verify(U, F, c.k, w));
+    if (!w) { w = '?'; ck.push({ t: 'bad', m: 'Belgede öğrenci/anne/baba adı bulunamadı (ekran görüntüsü kaydırılmış/kırpılmış olabilir). Adı görünen ekranı yükleyin veya Bilgilerim’deki adı kontrol edin' }); }
+    else ck.push(...L.verify(U, F, c.k, w, srcType));
     extract(c.k, w, raw, U, F, P, info, ck);
     if (w === '?' || ck.some(x => x.t === 'bad')) P.length = 0;
-    if (FRESH.includes(c.k)) {
+    if (FRESH.includes(c.k) && srcType !== 'img') {
       const ds = L.docDate(raw, U, srcType), dm = ds.match(/(\d{2})[./](\d{2})[./](\d{4})/);
       if (dm) { const age = (now - new Date(+dm[3], +dm[2] - 1, +dm[1])) / 864e5; if (age > 30) ck.push({ t: 'bad', m: 'Belge tarihi ' + ds + ' – 30 günden eski; güncel (yeni alınmış) belge gerekli' }); else if (age >= -2) ck.push({ t: 'ok', m: 'Güncel tarihli (' + ds + ')' }); else ck.push({ t: 'warn', m: 'Belge tarihi ileri görünüyor (' + ds + ')' }); }
       else ck.push({ t: 'warn', m: 'Belgede tarih okunamadı – son 30 gün içinde alındığından emin olun' });
     }
-    const bc = (raw.match(/\b(?:NV0\d-[A-Z0-9-]+|(?:SGK|KYK|YOK|ADB)[A-Z0-9]{8,})\b/) || [''])[0];
-    if (bc) ck.push({ t: 'ok', m: 'Doğrulama kodu: ' + bc + ' (turkiye.gov.tr/belge-dogrulama)' });
     return { k: c.k, w, ck, info, patches: P };
   };
 
-  /* ----- Gereklilik kuralları ----- */
   L.dead = (F, w) => w === 'm' ? F['anne.hayat'] === 'Hayır' : w === 'f' ? F['baba.hayat'] === 'Hayır' : false;
   L.req = (F, x) => {
     const k = x.k, w = x.w, d = w => L.dead(F, w);
-    if (['form', 'foto', 'kimlik_on', 'kimlik_ar', 'ikamet', 'ogrenci', 'kyk', 'nufus'].includes(k)) return true;
+    if (['foto', 'kimlik_on', 'kimlik_ar', 'ikamet', 'ogrenci', 'kyk', 'nufus'].includes(k)) return true;
     if (k === 'tapu' || k === 'arac') return !d(w);
     if (k === 'sinav' || k === 'yerles') return firstYear(F);
     if (k === 'transkript') return !firstYear(F);
     if (k === 'yurt') return !!F.yurt && F.ailedeMi !== 'Evet';
-    if (k === 'kira') return F.ailedeMi === 'Hayır' && !!F.kira;
+    if (k === 'kira' || k === 'kira_aile') return true;
     if (k === 'adli') return w === 's' ? true : !d(w);
     if (k === 'tescil' || k === 'vergi') return !d(w);
-    if (/^a4/.test(k)) return w === 's' ? (d('m') || d('f')) : !d(w);
+    if (/^a4/.test(k)) return true;
     return false;
   };
   L.dstat = d => d.ck.some(c => c.t === 'bad') ? 'bad' : d.ck.some(c => c.t === 'warn') ? 'warn' : 'ok';
   L.progress = (F, docs) => { const r = L.SL.filter(x => L.req(F, x)); const ok = r.filter(x => docs.some(d => d.id === x.id && L.dstat(d) !== 'bad')).length; return { n: r.length, ok, p: r.length ? Math.round(ok / r.length * 100) : 0, miss: r.filter(x => !docs.some(d => d.id === x.id)) }; };
 
 
-  /* Sahibi bilinmeyen belgeleri, form bilgileri güncellendikçe yeniden dene */
   L.refresh = (F, docs, now) => {
     docs.forEach(d => {
-      if (!d.k || d.k === '?' || d.k === 'foto' || !d.text) return;
+      if (!d.k || d.k === '?' || d.k === 'foto' || !d.text || !L.D.some(x => x.k === d.k)) return;
       if (d.w === '?') { const a = L.analyze(d.text, F, d.src || 'x', now); if (a.k === d.k && a.w !== '?') { d.w = a.w; d.id = d.k + ':' + a.w; d.ck = a.ck; d.info = a.info; L.apply(F, a.patches); } }
-      else d.ck = L.analyze(d.text, F, d.src || 'x', now, { k: d.k, w: d.w }).ck; // isim/tarih denetimi her zaman güncel
+      else d.ck = L.analyze(d.text, F, d.src || 'x', now, { k: d.k, w: d.w }).ck;
     });
     const seen = {}; for (let i = docs.length - 1; i >= 0; i--) { const d = docs[i]; if (d.w !== '?' && seen[d.id]) docs.splice(i, 1); else seen[d.id] = 1; }
     return docs;
   };
 
-  /* ----- Adım kapıları (öğrenci akışı) ----- */
-  L.REQF = ['ad', 'tc', 'dogum', 'adres', 'tel', 'mail', 'fakulte', 'sinif', 'okulno', 'gno', 'medeni', 'ailedeMi'];
-  L.idMiss = F => { const nt = s => (s || '').trim().split(/\s+/).filter(x => x.length > 1).length, m = [];
-    if (nt(F.ad) < 2) m.push('öğrenci adı-soyadı'); if (!/^\d{11}$/.test(F.tc || '')) m.push('T.C. kimlik no'); if (!F.sinif) m.push('sınıf');
-    if (nt(F['anne.ad']) < 2) m.push('anne adı-soyadı'); if (!F['anne.hayat']) m.push('anne hayatta mı'); if (nt(F['baba.ad']) < 2) m.push('baba adı-soyadı'); if (!F['baba.hayat']) m.push('baba hayatta mı'); return m; };
+  L.REQF = ['ad', 'tc', 'dogum', 'adres', 'tel', 'mail', 'okul', 'gecmisBurs', 'fakulte', 'giris', 'sinif', 'okulno', 'gno', 'medeni', 'tabipBurs', 'ailedeMi', 'engel'];
+  L.idMiss = F => { const nt = s => (s || '').trim().split(/\s+/).filter(x => x.length > 1).length, tcok = s => /^\d{11}$/.test((s || '').trim()), m = [];
+    if (nt(F.ad) < 2) m.push('öğrenci adı-soyadı'); if (!tcok(F.tc)) m.push('öğrenci T.C. kimlik no'); if (!F.sinif) m.push('sınıf');
+    if (nt(F['anne.ad']) < 1) m.push('anne adı'); if (!tcok(F['anne.tc'])) m.push('anne T.C. kimlik no'); if (!F['anne.hayat']) m.push('anne hayatta mı');
+    if (nt(F['baba.ad']) < 1) m.push('baba adı'); if (!tcok(F['baba.tc'])) m.push('baba T.C. kimlik no'); if (!F['baba.hayat']) m.push('baba hayatta mı'); return m; };
   L.steps = (F, docs, terms) => {
-    const pr = L.progress(F, docs), im = L.idMiss(F), bad = docs.filter(d => L.dstat(d) === 'bad').length, fm = L.REQF.filter(k => !String(F[k] || '').trim());
+    const pr = L.progress(F, docs), im = L.idMiss(F), bad = docs.filter(d => L.dstat(d) === 'bad').length, fm = L.REQF.filter(k => !['ad', 'tc', 'sinif'].includes(k) && !String(F[k] || '').trim());
     return [
       { k: 'terms', ok: !!terms, why: 'Önce şartları kabul edin' },
-      { k: 'kimlik', ok: !im.length, why: 'Eksik: ' + im.join(', ') },
+      { k: 'id', ok: !im.length, why: im.length ? 'Eksik: ' + im.join(', ') : '' },
       { k: 'docs', ok: pr.ok === pr.n && !bad, why: (pr.n - pr.ok ? (pr.n - pr.ok) + ' zorunlu belge eksik/sorunlu' : '') + (bad ? (pr.n - pr.ok ? ', ' : '') + bad + ' belge kabul edilmedi' : '') },
-      { k: 'form', ok: !fm.length, why: fm.length + ' zorunlu form alanı boş' }
+      { k: 'form', ok: !fm.length, why: fm.length + ' zorunlu soru cevaplanmadı' }
     ];
   };
   L.ready = (F, docs, terms) => L.steps(F, docs, terms).every(x => x.ok);
 
-  /* ----- Admin: ölçütler, şartlar, puan ----- */
   L.money = s => { const m = String(s || '').match(/\d[\d.,]*/); if (!m) return 0; let t = m[0].replace(/[.,]+$/, ''); t = /,\d{1,2}$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t.replace(/[.,]/g, ''); return parseFloat(t) || 0; };
   L.metrics = a => {
     const F = a.F || {}, ls = ((F.malvarlik || '') + '\n' + (F.aileMal || '')).split('\n');
@@ -323,7 +354,7 @@
   L.RULES = [
     { id: 'sent', t: 'Başvuru gönderilmiş olmalı', b: 1 }, { id: 'docs', t: 'Belgeler tam ve sorunsuz olmalı', b: 1 }, { id: 'maxTot', t: 'Toplam gelir en fazla (TL)', v: 80000 }, { id: 'maxPc', t: 'Kişi başı gelir en fazla (TL)', v: 25000 },
     { id: 'maxHouse', t: 'Ev sayısı en fazla', v: 1 }, { id: 'maxCar', t: 'Araç sayısı en fazla', v: 1 }, { id: 'minGno', t: 'Not ortalaması en az', v: 2 }];
-  L.defSet = () => ({ quota: 10, crit: Object.fromEntries(L.CRIT.map(c => [c.id, { on: true, w: c.w, p: c.p }])), rules: Object.fromEntries(L.RULES.map(r => [r.id, { on: r.id === 'sent' || r.id === 'docs', v: r.v }])) });
+  L.defSet = () => ({ quota: 10, crit: Object.fromEntries(L.CRIT.map(c => [c.id, { on: false, w: c.w, p: c.p }])), rules: Object.fromEntries(L.RULES.map(r => [r.id, { on: false, v: r.v }])) });
   L.mergeSet = x => { const d = L.defSet(); x = x || {}; d.quota = +x.quota >= 0 ? +x.quota : d.quota; for (const k in d.crit) Object.assign(d.crit[k], (x.crit || {})[k] || {}); for (const k in d.rules) Object.assign(d.rules[k], (x.rules || {})[k] || {}); return d; };
   L.score = (m, S) => {
     const C = S.crit, f = {
@@ -344,7 +375,6 @@
     if (on('minGno') && m.gno !== null && m.gno < v('minGno')) r.push('Not ort. ' + m.gno + ' < ' + v('minGno'));
     return r;
   };
-  /* Tüm başvuruları değerlendir: puan, eleme, sıra, burs/yedek */
   L.rank = (apps, S) => {
     const rows = apps.map(a => { const m = L.metrics(a), f = L.fails(a, m, S); return { a, m, f, sc: L.score(m, S) }; });
     const el = rows.filter(r => !r.f.length).sort((x, y) => y.sc - x.sc || x.m.pc - y.m.pc || (y.m.gno || 0) - (x.m.gno || 0));
