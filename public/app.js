@@ -1,5 +1,6 @@
 'use strict';
 const UNI = 'Tekirdağ Namık Kemal Üniversitesi – Tıp Fakültesi';
+const SINIF = ['Hazırlık', '1. sınıf', '2. sınıf', '3. sınıf', '4. sınıf', '5. sınıf', '6. sınıf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
 const $ = s => document.querySelector(s);
 const E = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -288,7 +289,6 @@ function vRegister() {
 const ORDER = ['terms', 'id', 'docs', 'form', 'sum'];
 const TABS = [['terms', 'Şartlar', 'description', 'Şartlar'], ['id', 'Kimlik', 'badge', 'Kimlik'], ['docs', 'Belgeler', 'folder_open', 'Belge'], ['form', 'Başvuru Formu', 'quiz', 'Form'], ['sum', 'Özet / Gönder', 'send', 'Gönder']];
 const IDK = ['ad', 'tc', 'sinif', 'anne.ad', 'anne.hayat', 'baba.ad', 'baba.hayat', 'anne.tc', 'baba.tc'];
-const SINIF = ['Hazırlık', '1. sınıf', '2. sınıf', '3. sınıf', '4. sınıf', '5. sınıf', '6. sınıf'];
 const IDF_ = { s: [['ad', 'Adınız – Soyadınız (kimlikteki gibi)', 't'], ['tc', 'T.C. Kimlik No (yabancı uyruklu: Yabancı Kimlik / Pasaport No)', 't'], ['sinif', 'Sınıfınız', 's', 0, SINIF]], m: [['anne.ad', 'Annenizin Adı Soyadı', 't'], ['anne.hayat', 'Anne hayatta mı?', 'y'], ['anne.tc', 'Anne T.C. / Yabancı Kimlik No', 't']], f: [['baba.ad', 'Babanızın Adı Soyadı', 't'], ['baba.hayat', 'Baba hayatta mı?', 'y'], ['baba.tc', 'Baba T.C. / Yabancı Kimlik No', 't']] };
 const gateOf = t => { if (S.unlock) return null; const st = L.steps(F, A.docs, A.terms), i = ORDER.indexOf(t); for (let j = 0; j < i; j++) if (!st[j].ok) return { j, why: st[j].why }; return null; };
 const firstOpen = () => { const i = L.steps(F, A.docs, A.terms).findIndex(x => !x.ok); return i < 0 ? 'sum' : ORDER[i]; };
