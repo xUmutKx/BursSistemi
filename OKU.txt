@@ -1,0 +1,14 @@
+BURS SİSTEMİ v4
+Termux tek komut : cd ~/storage/downloads && unzip -o BursSistemi.zip -d ~ && sh ~/BursSistemi/baslat.sh
+Windows          : Baslat.bat'a çift tıkla.   Linux/Mac: sh baslat.sh
+Demo : yönetici admin / 123   |   öğrenci herhangi 11 haneli TCKN / 123
+Veri : data/ klasörü (db.json + belgeler) – güncelleme (unzip -o) data/'ya dokunmaz. Port: PORT=9090 sh baslat.sh
+
+Öğrenci akışı (kilitli adımlar): Şartlar > Bilgilerim (ad, TC, anne/baba adı) > Belgeler > Form > Özet/Gönder
+- Her belgede kişinin adı-soyadı (veya TC) görünmeli; görünmezse/yanlış kişiyse belge KABUL EDİLMEZ.
+- e-Devlet belgeleri son 30 gün içinde olmalı. Adli sicil: öğrenci + anne + baba.
+- Gönder düğmesi yalnız her şey tamamsa çalışır (sunucu da denetler).
+Admin: Başvurular (filtre/sıralama: gelir, ev, araç, kardeş, not, demo/gerçek…) + Şartlar ve Puanlama (eleme şartları, ağırlıklar, kontenjan, listeyi onayla). “Örnek veri” demo başvuru ekler, “Demo sil” temizler.
+
+GitHub Pages demo (sunucusuz, veriler tarayicida): repo ana dizininde  git init && git add -A && git commit -m ilk && git branch -M main && git remote add origin https://github.com/KULLANICI/BursSistemi.git && git push -u origin main
+Sonra repo Settings > Pages > Source: GitHub Actions. Adres: https://KULLANICI.github.io/BursSistemi/  (demo giris: admin / 123, ogrenci: herhangi 11 haneli TCKN / 123)
