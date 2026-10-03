@@ -71,3 +71,4 @@ v11 NOTLARI (belge doğruluğu + güvenlik)
 - v11.2: Kayıtta üniversite seçimi kaldırıldı (tek seçenek). Giriş ekranında herkese görünen 'Başvuru Şartları' kartı (tto.org.tr/ogrenci-bursu + resmi belge listesi). 'Örnek veri' düğmesi hızlandırıldı (tek IndexedDB bağlantısı, 30 kayıt).
 - v11.3: örnek belgeler anında (saklanmadan, istendiğinde) üretilir; doğrulama sonucu e-Devlet barkodlu görünür.
 - v11.4: Gönderirken zorunlu beyan kutusu (yanlış bilgi -> burs kesilir, ödenen tutar yasal faiziyle geri ödenir); sunucu da ack=1 ister, ackAt kaydedilir.
+- v11.5: Şartlar tek satır; örnek belgeler mavi (e-Devlet); toplu yükleme alanı küçüldü; tapuda tarla/bahçe/arsa ev sayılmaz (konut ayrı); belge bilgileri ayrıntılı ('kayıt bulunamadı' vb.); öğrenci notu (Özet adımı, yönetici görür); örnek veride kira 'Yok' beyanları.

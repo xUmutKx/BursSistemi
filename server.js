@@ -58,6 +58,7 @@ function seed(n) {
     const a = newApp(u); a.F = F; a.terms = 1; a.status = pick(['Beklemede', 'Beklemede', 'Beklemede', 'Taslak', 'Onaylandı']); a.sent = Date.now() - rnd(0, 20) * 864e5;
     const miss = Math.random() < .3, dir = path.join(UP, tc); fs.mkdirSync(dir, { recursive: true });
     a.docs = L.SL.filter(x => !x.custom && L.req(F, x)).filter(() => !miss || Math.random() > .25).map(x => {
+      if ((x.k === 'kira' && !F.kira) || (x.k === 'kira_aile' && rnd(0, 1))) return { id: x.id, k: x.k, w: x.w, name: 'Beyan: yok', file: '', thumb: '', src: 'beyan', ck: [{ t: 'ok', m: 'Bu belge/kayıt yok olarak beyan edildi' }], info: ['Yok olarak beyan edildi'], ts: Date.now() };
       const who = x.w === 'm' ? F['anne.ad'] : x.w === 'f' ? F['baba.ad'] : F.ad, wtc = x.w === 'm' ? F['anne.tc'] : x.w === 'f' ? F['baba.tc'] : F.tc, fid = 'demo-' + x.k + '-' + x.w + '.svg';
       try { fs.writeFileSync(path.join(dir, fid), SG.doc(x.k, who, wtc, F, x.w, x.t)); } catch (e) {}
       return { id: x.id, k: x.k, w: x.w, name: fid, file: fid, thumb: SG.thumb(x.t, who), ...SG.ck(x.k, who, wtc, F, x.w), ts: Date.now() };
@@ -213,6 +214,7 @@ async function api(req, res, url) {
         if (b.F && typeof b.F === 'object') { a.F = cleanF(b.F); a.F.tc = a.F.tc || u.tc; if (a.F.ad && u.demo && u.name === u.tc) { u.name = a.F.ad; } }
         if (Array.isArray(b.docs)) { const nd = await markOrigin(cleanDocs(b.docs, u.tc), u.tc), keep = new Set(nd.flatMap(d => [d.file, ...d.extra.map(x => x.file)]).filter(Boolean)); (a.docs || []).forEach(d => [d.file, ...(d.extra || []).map(x => x.file)].forEach(f => { if (f && !keep.has(f)) { try { fs.unlinkSync(path.join(UP, u.tc, path.basename(f))); } catch (e) {} } })); a.docs = nd; }
         if (b.terms !== undefined) a.terms = b.terms ? 1 : 0;
+        if (b.snote !== undefined) a.snote = String(b.snote).slice(0, 2000);
         a.updated = Date.now(); persist(); return send(res, 200, { ok: true, name: u.name });
       }
       if (p === '/api/upload' && m === 'POST') {

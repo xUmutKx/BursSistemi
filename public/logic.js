@@ -230,7 +230,7 @@
     if (k === 'kyk' && neg) { P.push({ t: 'set', key: 'gecmisBurs', val: 'Hayır', src }, { t: 'set', key: 'kamuBurs', val: 'Yok (KYK kredi/burs yok)', src }); info.push('KYK kredi/burs almıyor'); }
     if (k === 'yurt') { const y = g(raw, /Yurt Adı\s+([^\n]+)/i) || g(raw, /Yurt Adı\s*[:\-]?\s*([A-ZÇĞİÖŞÜa-zçğıöşü\. ]+)/); if (y) { P.push({ t: 'set', key: 'yurt', val: tcase(y), src }, { t: 'set', key: 'ailedeMi', val: 'Hayır', src }); info.push('Yurt: ' + tcase(y)); } }
     if (k === 'tapu') {
-      const n = g(U, /ESLESEN TOPLAM (\d+)/) || g(U, /TOPLAM (\d+)\s*ADET/); const t = n ? n + ' adet taşınmaz kaydı var (inceleyin)' : (neg ? 'taşınmaz kaydı yok' : 'kayıt var/okunamadı (inceleyin)');
+      const n = g(U, /ESLESEN TOPLAM (\d+)/) || g(U, /TOPLAM (\d+)\s*ADET/), land = (U.match(/\b(TARLA|BAHCE|ZEYTINLIK|BAG|ARSA|ARAZI|MERA|ORMAN|FINDIKLIK|CAYIR|SEBZELIK|TARIM ARAZISI)\b/g) || []).length, hs = (U.match(/\b(MESKEN|KONUT|DAIRE|BAGIMSIZ BOLUM|MUSTAKIL|VILLA|YAZLIK|APARTMAN)\b/g) || []).length; const t = n ? (land + hs ? n + ' adet taşınmaz (' + Math.max(0, +n - Math.min(+n, land)) + ' konut/ev/diğer, ' + Math.min(+n, land) + ' tarla/bahçe/arsa) – inceleyin' : n + ' adet taşınmaz kaydı var (inceleyin)') : (neg ? 'taşınmaz kaydı yok' : 'kayıt var/okunamadı (inceleyin)');
       info.push('Tapu: ' + t); P.push(w === 's' ? { t: 'line', key: 'malvarlik', tag: 'Tapu', txt: t, src } : { t: 'line', key: 'aileMal', tag: L.WN[w] + ' tapu', txt: t, src });
     }
     if (k === 'arac') {
@@ -291,8 +291,8 @@
     const isE = EDEV.includes(k), isO = OSYM.includes(k); if (!isE && !isO) return [];
     meta = meta || {}; now = now || Date.now(); const U = N(raw || ''), tag = (t, m) => [{ t, m, o: 1 }], who = [meta.c, meta.p].filter(Boolean).join(' / ') || 'bilinmiyor', code = L.pdfCode(raw);
     if (U.replace(/[^A-Z0-9]/g, '').length < 40) return tag('bad', 'PDF’de okunabilir metin yok (tarama/fotoğraf PDF’i). Belgeyi e-Devlet’ten doğrudan indirdiğiniz orijinal PDF olarak yükleyin (ekran görüntüsü de kabul edilir).');
-    const stmt = isE ? /BELGE-?DOGRULAMA|BARKODLU BELGE/.test(U) : /BELGEKONTROL|KONTROL KODU/.test(U);
-    if (!stmt) return tag('bad', isE ? 'Belgede e-Devlet barkod doğrulama ifadesi yok – e-Devlet’ten alınmış orijinal belge değil.' : 'Belgede ÖSYM belge kontrol kodu yok – ÖSYM’den alınmış orijinal belge değil.');
+    const stmt = isE ? /BELGE-?DOGRULAMA|BARKODLU BELGE|KAREKOD|KARE KOD/.test(U) : /BELGEKONTROL|KONTROL KODU/.test(U);
+    if (!stmt) return tag('bad', isE ? 'Belgede e-Devlet doğrulama (barkod/karekod) ifadesi bulunamadı – e-Devlet’ten alınmış orijinal belge değil. Not: karekodlu belgeler de geçerlidir; sorun, belge üzerindeki “belge-dogrulama” yazısının olmamasıdır.' : 'Belgede ÖSYM belge kontrol kodu yok – ÖSYM’den alınmış orijinal belge değil.');
     const ed = EDITOR.test(who) && !GEN.test(who) && !(isO && /skia|chrome/i.test(who));
     if (ed) return code ? tag('warn', 'PDF bir düzenleme programında kaydedilmiş (' + who + ') – değiştirilmiş olabilir; yönetici “' + code + '” koduyla turkiye.gov.tr/belge-dogrulama’dan doğrulamalı.') : tag('bad', 'PDF bir düzenleme programında oluşturulmuş/değiştirilmiş (' + who + ') – e-Devlet’ten indirdiğiniz orijinal PDF’i yükleyin.');
     const cd = pdate(meta.cd), md = pdate(meta.md);
@@ -331,6 +331,7 @@
     else if (!D.custom || (D.ocr && D.ocr.name)) ck.push(...L.verify(U, F, c.k, w, srcType));
     if (!D.custom) extract(c.k, w, raw, U, F, P, info, ck); else if (w !== '?') customCheck(D, raw, U, ck, P, info, srcType, now);
     if (w === '?' || ck.some(x => x.t === 'bad')) P.length = 0;
+    if (!D.custom && w !== '?' && !ck.some(x => x.t === 'bad')) { const nn = NEG.test(U), who = L.WN[w] || ''; if (nn && ['tapu', 'arac', 'vergi', 'a4a', 'a4b', 'a4c', 'kyk', 'adli'].includes(c.k) && !info.some(i => /Kayıt bulunamadı/.test(i))) info.push('Kayıt bulunamadı: ' + D.t + ' – ' + who + ' adına kayıt yok (“kaydınız yoktur” belgesi, geçerli)'); else if (!nn && ['kyk', 'vergi', 'a4a', 'a4b', 'a4c', 'arac'].includes(c.k) && !info.some(i => /kayıt var|kaydı var/i.test(i))) info.push(D.t + ': ' + who + ' adına kayıt VAR – ayrıntıyı yönetici inceler'); if (!info.length) info.push(D.t + ' – ' + who + ' adına okundu'); }
     if (FRESH.includes(c.k) && srcType !== 'img') ageCheck(raw, U, srcType, now, 30, ck, true);
     if (srcType === 'pdf') ck.push(...L.origin(meta, raw, c.k, now));
     if (ck.some(x => x.t === 'bad')) P.length = 0;
@@ -387,7 +388,7 @@
   L.metrics = a => {
     const F = a.F || {}, ls = ((F.malvarlik || '') + '\n' + (F.aileMal || '')).split('\n');
     const inc = L.money(F.gelir) + L.money(F['anne.gelir']) + L.money(F['baba.gelir']);
-    let houses = 0; ls.forEach(l => { const m = l.match(/(\d+)\s*adet\s*taşınmaz/i); if (m) houses += +m[1]; else if (/tapu:/i.test(l) && /var\/okunamad/i.test(l)) houses += 1; });
+    let houses = 0; ls.forEach(l => { const m = l.match(/(\d+)\s*adet\s*taşınmaz/i), b = l.match(/\((\d+)\s*konut\/ev\/diğer/i); if (b) houses += +b[1]; else if (m) houses += +m[1]; else if (/tapu:/i.test(l) && /var\/okunamad/i.test(l)) houses += 1; });
     const cars = ls.filter(l => /araç:/i.test(l) && !/kaydı yok/i.test(l)).length;
     const sib = (F.bakma || '').split('\n').map(x => x.trim()).filter(x => x && !/^yok/i.test(x)).length;
     const dead = (F['anne.hayat'] === 'Hayır' ? 1 : 0) + (F['baba.hayat'] === 'Hayır' ? 1 : 0), mem = 1 + sib + (2 - dead);

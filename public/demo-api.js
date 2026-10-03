@@ -19,6 +19,7 @@
       const a = newApp(u); a.F = F; a.terms = 1; a.status = pick(['Beklemede', 'Beklemede', 'Beklemede', 'Taslak', 'Onaylandı']); a.sent = Date.now() - rnd(0, 20) * 864e5;
       const miss = Math.random() < .3;
       a.docs = L.SL.filter(x => L.req(F, x)).filter(() => !miss || Math.random() > .25).map(x => {
+        if ((x.k === 'kira' && !F.kira) || (x.k === 'kira_aile' && rnd(0, 1))) return { id: x.id, k: x.k, w: x.w, name: 'Beyan: yok', file: '', thumb: '', src: 'beyan', ck: [{ t: 'ok', m: 'Bu belge/kayıt yok olarak beyan edildi' }], info: ['Yok olarak beyan edildi'], ts: Date.now() };
         const who = x.w === 'm' ? F['anne.ad'] : x.w === 'f' ? F['baba.ad'] : F.ad, wtc = x.w === 'm' ? F['anne.tc'] : x.w === 'f' ? F['baba.tc'] : F.tc, fid = 'demo-' + x.k + '-' + x.w + '.svg';
         return { id: x.id, k: x.k, w: x.w, name: fid, file: fid, thumb: SG.thumb(x.t, who), ...SG.ck(x.k, who, wtc, F, x.w), ts: Date.now() };
       });
@@ -89,7 +90,7 @@
     if (p === '/api/logout') return R(200, { ok: true });
     if (u.role === 'student') {
       const a = db.apps[u.tc] = db.apps[u.tc] || newApp(u);
-      if (p === '/api/app' && m === 'PUT') { if (b.F && typeof b.F === 'object') { a.F = b.F; a.F.tc = a.F.tc || u.tc; if (a.F.ad && u.demo && u.name === u.tc) u.name = a.F.ad; } if (Array.isArray(b.docs)) a.docs = b.docs; if (b.terms !== undefined) a.terms = b.terms ? 1 : 0; a.updated = Date.now(); if (!(await save())) return R(507, { error: 'Tarayıcı depolaması dolu – bazı belgeleri silin' }); return R(200, { ok: true, name: u.name }); }
+      if (p === '/api/app' && m === 'PUT') { if (b.F && typeof b.F === 'object') { a.F = b.F; a.F.tc = a.F.tc || u.tc; if (a.F.ad && u.demo && u.name === u.tc) u.name = a.F.ad; } if (Array.isArray(b.docs)) a.docs = b.docs; if (b.terms !== undefined) a.terms = b.terms ? 1 : 0; if (b.snote !== undefined) a.snote = String(b.snote).slice(0, 2000); a.updated = Date.now(); if (!(await save())) return R(507, { error: 'Tarayıcı depolaması dolu – bazı belgeleri silin' }); return R(200, { ok: true, name: u.name }); }
       if (p === '/api/upload' && m === 'POST') { const id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); try { await fput(u.tc + '/' + id, o.body); } catch (e) { return R(200, { file: '', size: 0 }); } return R(200, { file: id, size: o.body && o.body.size || 0 }); }
       if (p === '/api/submit' && m === 'POST') { const cs = L.mergeSet(db.settings), T = L.termState(cs.term); if (url.searchParams.get('ack') !== '1') return R(400, { error: 'Başvuruyu göndermek için beyan kutusunu işaretlemelisiniz' }); if (!u.demo && T.s !== 'open') return R(403, { error: cs.term.msg || (T.s === 'before' ? 'Başvurular ' + L.fmtD(cs.term.open) + ' tarihinde açılacak' : 'Başvuru dönemi sona erdi') }); const force = u.demo && url.searchParams.get('force') === '1'; const bad = force ? null : L.steps(a.F, a.docs || [], a.terms).find(x => !x.ok); a.forced = !!force; if (bad) return R(400, { error: 'Başvuru gönderilemez – ' + bad.why }); if (a.status === 'Beklemede' || a.status === 'Onaylandı') return R(400, { error: 'Başvuru zaten gönderildi' }); a.status = 'Beklemede'; a.sent = Date.now(); await save(); return R(200, { ok: true, status: a.status }); }
     }
