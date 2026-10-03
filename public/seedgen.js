@@ -4,10 +4,16 @@
   const SY = ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Aydın', 'Öztürk', 'Arslan', 'Koç', 'Polat'], AN = ['Fatma', 'Hatice', 'Emine', 'Sevim', 'Gülay', 'Zehra'], BA = ['Hüseyin', 'İbrahim', 'Murat', 'Kemal', 'Osman', 'Recep'];
   const IL = ['Süleymanpaşa', 'Çorlu', 'Çerkezköy', 'Malkara', 'Hayrabolu', 'Ergene'], UNI = ['Tekirdağ Namık Kemal Üniversitesi – Tıp Fakültesi'];
   const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' TL';
+  // geçerli sağlama basamaklı T.C. kimlik no: T.C. vatandaşı 1-7 ile başlar, yabancı kimlik (YKN) 99 ile başlar
+  SG.tc = (rnd, foreign) => {
+    const d = foreign ? [9, 9] : [rnd(1, 7), rnd(0, 9)]; while (d.length < 9) d.push(rnd(0, 9));
+    d.push((((d[0] + d[2] + d[4] + d[6] + d[8]) * 7 - (d[1] + d[3] + d[5] + d[7])) % 10 + 10) % 10); d.push(d.reduce((a, b) => a + b, 0) % 10);
+    return d.join('');
+  };
   SG.SINIF = ['1. sınıf', '2. sınıf', '3. sınıf', '4. sınıf', '5. sınıf', '6. sınıf'];
   SG.make = (tc, rnd, pick) => {
     const sy = pick(SY), ad = pick([...FA, ...MA]) + ' ' + sy, sinif = pick(SG.SINIF), n = parseInt(sinif) || 1, first = n === 1;
-    const tcn = () => String(rnd(10000000000, 99999999999)), sokak = () => pick(['Atatürk', 'Cumhuriyet', 'İnönü', 'Gazi', 'Çınar']) + ' Cad. No:' + rnd(1, 90) + ' D:' + rnd(1, 12), mah = () => pick(['Cumhuriyet', 'Yeni', 'Gündüz', 'Hürriyet']) + ' Mah. ';
+    const tcn = () => SG.tc(rnd, rnd(1, 12) === 1), sokak = () => pick(['Atatürk', 'Cumhuriyet', 'İnönü', 'Gazi', 'Çınar']) + ' Cad. No:' + rnd(1, 90) + ' D:' + rnd(1, 12), mah = () => pick(['Cumhuriyet', 'Yeni', 'Gündüz', 'Hürriyet']) + ' Mah. ';
     const il = pick(IL), adres = mah() + sokak() + ' ' + il + ' / Tekirdağ', tel = () => '05' + pick(['32', '33', '35', '42', '53']) + ' ' + rnd(100, 999) + ' ' + rnd(10, 99) + ' ' + rnd(10, 99);
     const ayri = pick([0, 0, 1]), kiraDa = ayri && pick([0, 1]), kd = rnd(0, 3), tp = pick([0, 0, 1, 1, 2, 3]), ar = pick([0, 0, 1, 2]);
     const am = pick([0, 1, 1, 1]), bm = pick([0, 1, 1, 1]), ge = pick([0, 18000, 26000, 40000, 65000, 90000]), gb = pick([0, 22000, 30000, 45000]);
@@ -59,8 +65,41 @@
     if (k.startsWith('a4')) return { org: 'T.C. SOSYAL GÜVENLİK KURUMU BAŞKANLIĞI', t: k.slice(1).toUpperCase() + ' EMEKLİ AYLIK BİLGİLERİ', rows: [...kimlik], para: 'Bu kimlik numarasına ait ' + k.slice(1).toUpperCase() + ' kapsamında emekli aylığı kaydı bulunamamıştır.', bc: code('SGK', k + tc, 16) };
     return D[k] || { org: 'BELGE', t: String(k).toUpperCase(), rows: [...kimlik] };
   };
-  SG.ck = (k, who, tc, F, w) => { const o = docDef(k, who, tc, F || {}, w), c = o.bc || (o.kc ? o.kc : ''), d = today(); return c ? { ck: [{ t: 'ok', m: (o.kc ? 'ÖSYM kontrol kodlu orijinal belge' : 'e-Devlet barkodlu orijinal belge') + ' (kod ' + c + ')', o: 1 }, { t: 'ok', m: 'Güncel tarihli (' + d + ')' }, { t: 'ok', m: 'Belge ' + who + ' adına doğrulandı' }], info: [(o.kc ? 'ÖSYM' : 'e-Devlet') + ' belgesi – ' + who + ' – ' + d] } : { ck: [{ t: 'ok', m: 'Belge ' + who + ' adına doğrulandı' }], info: ['Belge – ' + who] }; };
+  SG.ck = (k, who, tc, F, w) => {
+    if (SHOT[k]) return { ck: [{ t: 'ok', m: 'e-Devlet ekran görüntüsü – ' + who + ' adına “bulunamamıştır” ekranı doğrulandı' }], info: ['Kayıt bulunamadı: ' + SHOT[k][1] + ' – ' + who + ' adına kayıt yok (geçerli belge)'] };
+    const o = docDef(k, who, tc, F || {}, w), c = o.bc || (o.kc ? o.kc : ''), d = today(); return c ? { ck: [{ t: 'ok', m: (o.kc ? 'ÖSYM kontrol kodlu orijinal belge' : 'e-Devlet barkodlu orijinal belge') + ' (kod ' + c + ')', o: 1 }, { t: 'ok', m: 'Güncel tarihli (' + d + ')' }, { t: 'ok', m: 'Belge ' + who + ' adına doğrulandı' }], info: [(o.kc ? 'ÖSYM' : 'e-Devlet') + ' belgesi – ' + who + ' – ' + d] } : { ck: [{ t: 'ok', m: 'Belge ' + who + ' adına doğrulandı' }], info: ['Belge – ' + who] }; };
+
+  // e-Devlet "kayıt bulunamamıştır" ekran görüntüsü (telefon, açık tema, mavi)
+  const SHOT = {
+    tapu: ['Tapu ve Kadastro Genel Müdürlüğü', 'Tapu Bilgileri Sorgulama', "Bu hizmet yalnızca TAKBİS'te T.C. Kimlik Numarası kayıtlı olan kişiler kapsamında sunulmaktadır.", 'Tapu Kadastro Genel Müdürlüğü Bilgi Sistemine geçmiş Tapu Sicil Müdürlüklerine ait kayıtlarda; T.C. Kimlik numaranız ile eşleşen herhangi bir kayıt bulunamamıştır.'],
+    arac: ['Emniyet Genel Müdürlüğü', 'Adıma Tescilli Araç Sorgulama', 'Bu hizmet T.C. Kimlik Numarası ile tescilli araçlarınızı listelemektedir.', 'T.C. Kimlik numaranız adına tescilli herhangi bir araç kaydı bulunamamıştır.'],
+    vergi: ['Gelir İdaresi Başkanlığı', 'e-Vergi Levhası Sorgulama', 'Bu hizmet vergi mükellefi olan kişiler kapsamında sunulmaktadır.', 'T.C. Kimlik numaranız ile eşleşen herhangi bir vergi levhası kaydı bulunamamıştır.'],
+    a4a: ['Sosyal Güvenlik Kurumu', '4A Emekli Aylık Bilgisi', 'Bu hizmet 4/a kapsamında aylık alan kişiler için sunulmaktadır.', 'T.C. Kimlik numaranız ile eşleşen herhangi bir 4A emekli aylığı kaydı bulunamamıştır.'],
+    a4b: ['Sosyal Güvenlik Kurumu', '4B Emekli Aylık Bilgisi', 'Bu hizmet 4/b kapsamında aylık alan kişiler için sunulmaktadır.', 'T.C. Kimlik numaranız ile eşleşen herhangi bir 4B emekli aylığı kaydı bulunamamıştır.'],
+    a4c: ['Sosyal Güvenlik Kurumu', '4C Emekli Aylık Bilgisi', 'Bu hizmet 4/c kapsamında aylık alan kişiler için sunulmaktadır.', 'T.C. Kimlik numaranız ile eşleşen herhangi bir 4C emekli aylığı kaydı bulunamamıştır.']
+  };
+  const wrap = (s, n) => { const o = []; let l = ''; String(s).split(' ').forEach(w => { if ((l + ' ' + w).trim().length > n) { o.push(l); l = w; } else l = (l + ' ' + w).trim(); }); if (l) o.push(l); return o; };
+  const shotSvg = (k, who) => {
+    const [org, svc, intro, msg] = SHOT[k], nm = String(who).toLocaleUpperCase('tr-TR'), W = 540, H = 1121, B = '#1d5fa8', t = (x, y, s, sz, fill, extra) => '<text x="' + x + '" y="' + y + '" font-family="Arial,Helvetica,sans-serif" font-size="' + sz + '" fill="' + fill + '" ' + (extra || '') + '>' + e(s) + '</text>';
+    let o = '<rect width="' + W + '" height="' + H + '" fill="#fff"/><rect width="' + W + '" height="66" fill="#fff"/>' + t(100, 42, 'www.turkiye.gov.tr', 24, '#111') + '<rect x="14" y="24" width="30" height="22" rx="4" fill="none" stroke="#111" stroke-width="3"/><circle cx="500" cy="34" r="3" fill="#111"/><circle cx="500" cy="46" r="3" fill="#111"/><circle cx="500" cy="22" r="3" fill="#111"/>';
+    o += '<rect y="66" width="' + W + '" height="200" fill="' + B + '"/>' + t(98, 118, 'türkiye.gov.tr', 30, '#fff', 'font-weight="bold"') + t(98, 134, '“Devletin Kısayolu”', 8, '#fff') + '<ellipse cx="52" cy="112" rx="34" ry="24" fill="none" stroke="#fff" stroke-width="4" transform="rotate(-20 52 112)"/><rect x="494" y="100" width="28" height="4" fill="#fff"/><rect x="494" y="110" width="28" height="4" fill="#fff"/><rect x="494" y="120" width="28" height="4" fill="#fff"/>';
+    o += '<rect x="56" y="156" width="40" height="40" rx="8" fill="#1a4f8c"/><rect x="104" y="156" width="40" height="40" rx="8" fill="#1a4f8c"/><rect x="156" y="156" width="330" height="40" rx="8" fill="#e8eef6"/>' + t(172, 182, 'Nasıl yardım edebilirim?', 15, '#8a96a8');
+    o += '<rect x="116" y="208" width="308" height="42" rx="8" fill="#fff"/>' + t(200, 236, nm.split(' ').slice(0, 2).join(' '), 18, '#1d5fa8') + '<circle cx="176" cy="229" r="9" fill="#1d5fa8"/>';
+    o += t(30, 292, 'Ana Sayfa  ›  ' + org.slice(0, 26) + (org.length > 26 ? '…' : '') + '  ›  ' + svc.slice(0, 18), 12.5, B);
+    o += '<rect x="22" y="320" width="78" height="78" fill="#fff" stroke="#d9dee6"/><rect x="34" y="334" width="54" height="50" fill="' + B + '" opacity=".15"/>' + t(116, 345, org, 17, B) + t(116, 380, svc, 23, '#111');
+    o += t(150, 450, '★ Favorilere ekle', 14, '#6b7280') + t(300, 450, '● Puanla', 14, '#6b7280') + t(400, 450, '⋖ Paylaş', 14, '#6b7280');
+    o += t(18, 506, 'Sayın ' + nm + ',', 17.5, '#111'); wrap(intro, 46).forEach((l, i) => { o += t(18, 532 + i * 24, l, 16, '#111'); });
+    const box = (y, h, fill, stroke, icon, lines, sz) => { let b = '<rect x="18" y="' + y + '" width="504" height="' + h + '" rx="10" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2"/>' + icon; lines.forEach((l, i) => { b += t(96, y + 36 + i * (sz + 8), l, sz, '#111'); }); return b; };
+    const tri = y => '<polygon points="44,' + (y + 56) + ' 66,' + (y + 18) + ' 88,' + (y + 56) + '" fill="#1a56db"/><rect x="64" y="' + (y + 30) + '" width="4" height="12" fill="#fff"/><rect x="64" y="' + (y + 46) + '" width="4" height="4" fill="#fff"/>';
+    const ml = wrap(msg, 36); o += box(600, 36 + ml.length * 28 + 20, '#eff5ff', '#1a56db', tri(600 + 8), ml, 17);
+    const y2 = 600 + 36 + ml.length * 28 + 36; o += box(y2, 96, '#f0f9ff', '#3b6fd4', '<circle cx="56" cy="' + (y2 + 48) + '" r="20" fill="#9aa5b8"/>', wrap('Yukarıdaki bilginin doğru olmadığını düşünüyorsanız, ilgili kuruma başvurarak kimlik bilgilerinizi güncellemeniz gerekmektedir.', 52), 13);
+    const y3 = y2 + 96 + 24; o += box(y3, 96, '#eef4ff', '#1d5fa8', '<circle cx="56" cy="' + (y3 + 48) + '" r="20" fill="#1d5fa8"/><rect x="53" y="' + (y3 + 40) + '" width="6" height="18" fill="#fff"/><rect x="53" y="' + (y3 + 32) + '" width="6" height="5" fill="#fff"/>', ['Başka bir T.C. Kimlik Numarası için ya da önceki', 'sonuçlarınızı görmek için tıklayınız.'], 14);
+    o += '<rect y="' + (H - 66) + '" width="' + W + '" height="66" fill="#eef1f5"/>' + t(18, H - 22, 'DEMO – örnek ekran görüntüsüdür, gerçek değildir.', 11, '#9aa3b2');
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' + o + '</svg>';
+  };
+  SG.isShot = k => !!SHOT[k];
   SG.doc = (k, who, tc, F, w, title) => {
+    if (SHOT[k]) return shotSvg(k, who);
     const o = docDef(k, who, tc, F || {}, w), d = today(), edev = !!(o.bc || o.kc), W = 595, H = 842, r = rg(hs(tc + k)); let y = 150, out = '';
     out += '<rect width="' + W + '" height="' + H + '" fill="#fff"/>' + '<rect width="' + W + '" height="86" fill="' + (edev ? '#1d4f91' : '#334155') + '"/><text x="30" y="34" font-family="Arial" font-size="11" fill="#fff" opacity=".9">' + e(o.org) + '</text><text x="30" y="64" font-family="Arial" font-size="19" font-weight="bold" fill="#fff">' + e(o.t) + '</text>';
     out += '<text x="565" y="112" text-anchor="end" font-family="Arial" font-size="11" fill="#555">' + d + '</text>';

@@ -55,3 +55,14 @@ md-chip-set{display:flex;flex-wrap:wrap;gap:6px}
 .mdpanel2{overflow:hidden}
 .rnum{width:6.5rem!important;flex:0 0 6.5rem}
 .crit-b .rnum{width:5.5rem!important;flex-basis:5.5rem}
+
+/* iOS/Android: tarayıcı alt çubuğu ve ana ekran çizgisiyle çakışmayı önle (güvenli alan + dinamik yükseklik) */
+body{min-height:100vh;min-height:100dvh}
+@supports(-webkit-touch-callout:none){body{min-height:-webkit-fill-available}}
+body.has-bnav main{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+body.has-bnav #tt{bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+#tt{bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+#helpBtn{bottom:calc(5.5rem + env(safe-area-inset-bottom,0px))!important}
+@media(min-width:768px){#helpBtn{bottom:calc(1.25rem + env(safe-area-inset-bottom,0px))!important}body.has-bnav main{padding-bottom:24px}}
+nav.sticky{padding-top:env(safe-area-inset-top,0px)}
+input,select,textarea{font-size:max(16px,1em)}

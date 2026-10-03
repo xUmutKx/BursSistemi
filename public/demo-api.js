@@ -14,7 +14,7 @@
   const jobs = [], CODES = {}, UNI = 'Tekirdağ Namık Kemal Üniversitesi – Tıp Fakültesi';
   function seed(n) {
     for (let i = 0; i < n; i++) {
-      let tc; do tc = '9' + String(rnd(1e9, 9e9 - 1)).padStart(10, '0').slice(0, 10); while (db.users[tc]);
+      let tc; do tc = SG.tc(rnd, rnd(1, 10) === 1); while (db.users[tc]);
       const F = SG.make(tc, rnd, pick), u = db.users[tc] = mkUser(tc, F.ad, '123', 'student', { demo: true, email: F.mail, tel: F.tel });
       const a = newApp(u); a.F = F; a.terms = 1; a.status = pick(['Beklemede', 'Beklemede', 'Beklemede', 'Taslak', 'Onaylandı']); a.sent = Date.now() - rnd(0, 20) * 864e5;
       const miss = Math.random() < .3;
