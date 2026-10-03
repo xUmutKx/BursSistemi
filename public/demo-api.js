@@ -20,8 +20,7 @@
       const miss = Math.random() < .3;
       a.docs = L.SL.filter(x => L.req(F, x)).filter(() => !miss || Math.random() > .25).map(x => {
         const who = x.w === 'm' ? F['anne.ad'] : x.w === 'f' ? F['baba.ad'] : F.ad, wtc = x.w === 'm' ? F['anne.tc'] : x.w === 'f' ? F['baba.tc'] : F.tc, fid = 'demo-' + x.k + '-' + x.w + '.svg';
-        jobs.push(fput(tc + '/' + fid, new Blob([SG.doc(x.k, who, wtc, F, x.w, x.t)], { type: 'image/svg+xml' })).catch(() => {}));
-        return { id: x.id, k: x.k, w: x.w, name: fid, file: fid, thumb: SG.thumb(x.t, who), ck: [{ t: 'ok', m: 'Demo belge' }], info: ['Demo belge – ' + who], ts: Date.now() };
+        return { id: x.id, k: x.k, w: x.w, name: fid, file: fid, thumb: SG.thumb(x.t, who), ...SG.ck(x.k, who, wtc, F, x.w), ts: Date.now() };
       });
       db.apps[tc] = a;
     }
@@ -68,7 +67,11 @@
       const nu = db.users[id] = mkUser(id, String(b.name).trim(), String(b.pw), 'student', { demo: !LIVE, foreign, email: em, tel: b.tel || '', uni: UNI });
       const a = db.apps[id] = db.apps[id] || newApp(nu); a.F.ad = nu.name; a.F.mail = a.F.mail || nu.email; a.F.tel = a.F.tel || nu.tel; if (b.uni && !a.F.fakulte) a.F.fakulte = b.uni; await save(); return R(200, { ok: true });
     }
-    if (p.startsWith('/api/file/')) { const q = p.split('/'); const b = await fget(q[3] + '/' + q[4]).catch(() => null); return b ? new Response(b, { status: 200, headers: { 'Content-Type': b.type || 'application/octet-stream' } }) : R(404, { error: 'Dosya bulunamadı' }); }
+    if (p.startsWith('/api/file/')) { const q = p.split('/'); const b = await fget(q[3] + '/' + q[4]).catch(() => null); if (b) return new Response(b, { status: 200, headers: { 'Content-Type': b.type || 'application/octet-stream' } });
+      // örnek (demo) belgeler saklanmaz, istendiğinde üretilir (tohumlama anında biter)
+      const dm = /^demo-(.+)-([smfa])\.svg$/.exec(decodeURIComponent(q[4] || '')), ap = db.apps[q[3]];
+      if (dm && ap) { const w = dm[2], F = ap.F; return new Response(SG.doc(dm[1], w === 'm' ? F['anne.ad'] : w === 'f' ? F['baba.ad'] : F.ad, w === 'm' ? F['anne.tc'] : w === 'f' ? F['baba.tc'] : F.tc, F, w, dm[1]), { status: 200, headers: { 'Content-Type': 'image/svg+xml' } }); }
+      return R(404, { error: 'Dosya bulunamadı' }); }
     if (!u) return R(401, { error: 'Oturum süresi doldu' });
     if (p === '/api/profile' && m === 'POST') {
       if (u.role !== 'student') return R(403, { error: 'Yönetici bilgileri buradan değiştirilemez' });

@@ -60,7 +60,7 @@ function seed(n) {
     a.docs = L.SL.filter(x => !x.custom && L.req(F, x)).filter(() => !miss || Math.random() > .25).map(x => {
       const who = x.w === 'm' ? F['anne.ad'] : x.w === 'f' ? F['baba.ad'] : F.ad, wtc = x.w === 'm' ? F['anne.tc'] : x.w === 'f' ? F['baba.tc'] : F.tc, fid = 'demo-' + x.k + '-' + x.w + '.svg';
       try { fs.writeFileSync(path.join(dir, fid), SG.doc(x.k, who, wtc, F, x.w, x.t)); } catch (e) {}
-      return { id: x.id, k: x.k, w: x.w, name: fid, file: fid, thumb: SG.thumb(x.t, who), ck: [{ t: 'ok', m: 'Demo belge' }], info: ['Demo belge – ' + who], ts: Date.now() };
+      return { id: x.id, k: x.k, w: x.w, name: fid, file: fid, thumb: SG.thumb(x.t, who), ...SG.ck(x.k, who, wtc, F, x.w), ts: Date.now() };
     });
     db.apps[tc] = a;
   }
