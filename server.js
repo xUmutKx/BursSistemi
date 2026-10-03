@@ -232,11 +232,12 @@ async function api(req, res, url) {
       }
       if (p === '/api/submit' && m === 'POST') {
         const force = u.demo && DEMO_TAP && url.searchParams.get('force') === '1', T = L.termState(cfg.term);
+        if (url.searchParams.get('ack') !== '1') return send(res, 400, { error: 'Başvuruyu göndermek için beyan kutusunu işaretlemelisiniz' });
         if (!u.demo && T.s !== 'open') return send(res, 403, { error: cfg.term.msg || (T.s === 'before' ? 'Başvurular ' + L.fmtD(cfg.term.open) + ' tarihinde açılacak' : 'Başvuru dönemi sona erdi') });
         const bad = force ? null : L.steps(a.F, a.docs || [], a.terms).find(x => !x.ok); a.forced = !!force;
         if (bad) return send(res, 400, { error: 'Başvuru gönderilemez – ' + bad.why });
         if (a.status === 'Beklemede' || a.status === 'Onaylandı') return send(res, 400, { error: 'Başvuru zaten gönderildi' });
-        a.status = 'Beklemede'; a.sent = Date.now(); persist(); return send(res, 200, { ok: true, status: a.status });
+        a.status = 'Beklemede'; a.sent = Date.now(); a.ackAt = a.sent; persist(); return send(res, 200, { ok: true, status: a.status });
       }
     }
     if (u.role === 'admin') {
