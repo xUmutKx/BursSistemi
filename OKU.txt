@@ -72,3 +72,4 @@ v11 NOTLARI (belge doğruluğu + güvenlik)
 - v11.3: örnek belgeler anında (saklanmadan, istendiğinde) üretilir; doğrulama sonucu e-Devlet barkodlu görünür.
 - v11.4: Gönderirken zorunlu beyan kutusu (yanlış bilgi -> burs kesilir, ödenen tutar yasal faiziyle geri ödenir); sunucu da ack=1 ister, ackAt kaydedilir.
 - v11.5: Şartlar tek satır; örnek belgeler mavi (e-Devlet); toplu yükleme alanı küçüldü; tapuda tarla/bahçe/arsa ev sayılmaz (konut ayrı); belge bilgileri ayrıntılı ('kayıt bulunamadı' vb.); öğrenci notu (Özet adımı, yönetici görür); örnek veride kira 'Yok' beyanları.
+- v11.6: Çoklu cihaz/sekme: aynı hesapla aynı anda birden çok oturum (kullanıcı başına en fazla 20). Eski sürümden gelen kayıt sürüm numarasıyla (rev) algılanır ve alan/belge düzeyinde birleştirilir; açık sayfalar 15 sn'de bir ve sekmeye dönünce sunucudaki yeni kaydı alır (yazı yazarken bozulmaz).

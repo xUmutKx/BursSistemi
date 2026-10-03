@@ -142,6 +142,7 @@ async function api(req, res, url) {
       } else if (!same(u.h, hash(pw, u.salt)) && !(demoOk && u.demo && pw === '123')) return fail(demoOk ? 'Şifre hatalı' : 'TCKN veya şifre hatalı');
       if (u.role === 'admin' && !same(u.h, hash(pw, u.salt))) return fail('TCKN veya şifre hatalı');
       hits.delete(fk);
+      const mine = Object.entries(db.sessions).filter(([, v]) => v.tc === u.tc).sort((x, y) => x[1].exp - y[1].exp); while (mine.length >= 20) delete db.sessions[mine.shift()[0]];
       const t = crypto.randomBytes(24).toString('hex'); db.sessions[sh(t)] = { tc: u.tc, exp: Date.now() + SESSION_MS }; persist();
       return send(res, 200, { token: t, user: { tc: u.tc, name: u.name, role: u.role } });
     }
@@ -211,11 +212,20 @@ async function api(req, res, url) {
       const a = db.apps[u.tc] = db.apps[u.tc] || newApp(u);
       if (p === '/api/app' && m === 'PUT') {
         const b = await json(req);
+        const stale = (+b.rev || 0) !== (a.rev || 0);
+        if (stale) {
+          // başka bir cihaz/sekme daha yeni kaydetmiş: bu cihazın değişiklikleri birleştirilir, hiçbir şey kaybolmaz
+          const nd = Array.isArray(b.docs) ? await markOrigin(cleanDocs(b.docs, u.tc), u.tc) : [];
+          L.mergeApp(a, b.F && typeof b.F === 'object' ? cleanF(b.F) : {}, nd); a.F.tc = a.F.tc || u.tc;
+          if (b.terms) a.terms = 1; if (b.snote !== undefined && String(b.snote).trim()) a.snote = String(b.snote).slice(0, 2000);
+          a.rev = (a.rev || 0) + 1; a.updated = Date.now(); persist();
+          return send(res, 200, { ok: true, name: u.name, rev: a.rev, merged: true, app: { F: a.F, docs: a.docs, terms: a.terms, status: a.status, note: a.note, snote: a.snote, rev: a.rev } });
+        }
         if (b.F && typeof b.F === 'object') { a.F = cleanF(b.F); a.F.tc = a.F.tc || u.tc; if (a.F.ad && u.demo && u.name === u.tc) { u.name = a.F.ad; } }
         if (Array.isArray(b.docs)) { const nd = await markOrigin(cleanDocs(b.docs, u.tc), u.tc), keep = new Set(nd.flatMap(d => [d.file, ...d.extra.map(x => x.file)]).filter(Boolean)); (a.docs || []).forEach(d => [d.file, ...(d.extra || []).map(x => x.file)].forEach(f => { if (f && !keep.has(f)) { try { fs.unlinkSync(path.join(UP, u.tc, path.basename(f))); } catch (e) {} } })); a.docs = nd; }
         if (b.terms !== undefined) a.terms = b.terms ? 1 : 0;
         if (b.snote !== undefined) a.snote = String(b.snote).slice(0, 2000);
-        a.updated = Date.now(); persist(); return send(res, 200, { ok: true, name: u.name });
+        a.rev = (a.rev || 0) + 1; a.updated = Date.now(); persist(); return send(res, 200, { ok: true, name: u.name, rev: a.rev });
       }
       if (p === '/api/upload' && m === 'POST') {
         if (!bucket('u:' + u.tc, 300, 36e5, 6e5)) return send(res, 429, { error: 'Çok fazla yükleme – biraz bekleyin' });
@@ -239,7 +249,7 @@ async function api(req, res, url) {
         const bad = force ? null : L.steps(a.F, a.docs || [], a.terms).find(x => !x.ok); a.forced = !!force;
         if (bad) return send(res, 400, { error: 'Başvuru gönderilemez – ' + bad.why });
         if (a.status === 'Beklemede' || a.status === 'Onaylandı') return send(res, 400, { error: 'Başvuru zaten gönderildi' });
-        a.status = 'Beklemede'; a.sent = Date.now(); a.ackAt = a.sent; persist(); return send(res, 200, { ok: true, status: a.status });
+        a.status = 'Beklemede'; a.sent = Date.now(); a.ackAt = a.sent; a.rev = (a.rev || 0) + 1; persist(); return send(res, 200, { ok: true, status: a.status, rev: a.rev });
       }
     }
     if (u.role === 'admin') {
@@ -253,7 +263,7 @@ async function api(req, res, url) {
       if (dm && m === 'DELETE' && db.apps[dm[1]]) {
         const a = db.apps[dm[1]], id = decodeURIComponent(dm[2]), d = (a.docs || []).find(x => x.id === id); if (!d) return send(res, 404, { error: 'Belge yok' });
         [d.file, ...(d.extra || []).map(x => x.file)].filter(Boolean).forEach(f => { try { fs.unlinkSync(path.join(UP, dm[1], path.basename(f))); } catch (e) {} PROV.delete(dm[1] + '/' + f); });
-        a.docs = a.docs.filter(x => x !== d); if (a.status === 'Beklemede') a.status = 'Eksik belge'; a.updated = Date.now(); persist(); return send(res, 200, { ok: true });
+        a.docs = a.docs.filter(x => x !== d); if (a.status === 'Beklemede') a.status = 'Eksik belge'; a.rev = (a.rev || 0) + 1; a.updated = Date.now(); persist(); return send(res, 200, { ok: true });
       }
       const mm = p.match(/^\/api\/admin\/app\/(\d+)$/);
       if (mm && db.apps[mm[1]]) {
@@ -264,7 +274,7 @@ async function api(req, res, url) {
           if (b.status && STATUSES.includes(String(b.status))) a.status = String(b.status);
           if (b.note !== undefined) a.note = String(b.note).slice(0, 2000);
           if (b.resetPw && db.users[mm[1]]) { const us = db.users[mm[1]], pw = genPw(); us.salt = crypto.randomBytes(8).toString('hex'); us.h = hash(pw, us.salt); if (us.demo) us.pt = pw; Object.keys(db.sessions).forEach(t => { if (db.sessions[t].tc === mm[1]) delete db.sessions[t]; }); out.pw = pw; }
-          a.updated = Date.now(); persist(); return send(res, 200, out);
+          a.rev = (a.rev || 0) + 1; a.updated = Date.now(); persist(); return send(res, 200, out);
         }
         if (m === 'DELETE') { delete db.apps[mm[1]]; delete db.users[mm[1]]; try { fs.rmSync(path.join(UP, mm[1]), { recursive: true, force: true }); } catch (e) {} persist(); return send(res, 200, { ok: true }); }
       }

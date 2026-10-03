@@ -338,6 +338,13 @@
     return { k: c.k, w, ck, info, patches: P };
   };
 
+  // Aynı hesaba birden çok cihaz/sekme aynı anda yazarsa (eski sürümle kaydedilirse) alanlar ve belgeler birleştirilir
+  L.mergeApp = (a, F, docs) => {
+    const m = Object.assign({}, a.F || {}); Object.keys(F || {}).forEach(k => { if (k === '_a') m._a = Object.assign({}, m._a, F._a); else if (String(F[k] == null ? '' : F[k]).trim() || !(k in m)) m[k] = F[k]; }); a.F = m;
+    const key = d => d.file || (d.id + '|' + (d.ts || 0)), by = new Map();
+    [...(a.docs || []), ...(docs || [])].forEach(d => { const id = d.w === '?' ? key(d) : d.id, e = by.get(id); if (!e || (d.ts || 0) >= (e.ts || 0)) by.set(id, d); });
+    a.docs = [...by.values()];
+  };
   L.dead = (F, w) => w === 'm' ? F['anne.hayat'] === 'Hayır' : w === 'f' ? F['baba.hayat'] === 'Hayır' : false;
   L.req = (F, x) => {
     const k = x.k, w = x.w, d = w => L.dead(F, w);

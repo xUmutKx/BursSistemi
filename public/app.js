@@ -25,7 +25,7 @@ function flushSave() {
   sv = sv.then(async () => {
     if (!A || !dirty) return;
     dirty = false;
-    try { await api('/api/app', { method: 'PUT', json: { F, docs: A.docs, terms: A.terms, snote: A.snote || '' } }); }
+    try { const d = await api('/api/app', { method: 'PUT', json: { F, docs: A.docs, terms: A.terms, snote: A.snote || '', rev: A.rev } }); if (d.rev !== undefined) A.rev = d.rev; if (d.merged && d.app) adoptApp(d.app); }
     catch (e) { dirty = true; toast('Kaydedilemedi: ' + e.message); }
   });
   return sv;
@@ -473,11 +473,23 @@ function pSum() {
   ${A.note ? `<div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10 text-sm mb-4"><b>Yönetici notu:</b> ${E(A.note)}</div>` : ''}
   ${sent ? (A.snote ? `<div class="p-3 rounded-lg bg-gray-50 dark:bg-amoled-base text-sm mb-4"><b>Notunuz:</b> ${E(A.snote)}</div>` : '') : `<label class="lbl">Yönetime notunuz (isteğe bağlı)</label><textarea class="inp mb-3" rows="3" maxlength="2000" placeholder="Yükleyemediğiniz belgeler varsa nedenini yazın. Örn: Babam vefat etti, bordro yok; kira kontratı yok çünkü ailemizin evinde oturuyoruz…" oninput="A.snote=this.value;save()">${E(A.snote || '')}</textarea><label class="flex items-start gap-2.5 text-sm cursor-pointer p-3 mb-3 rounded-lg border border-orange-300 dark:border-orange-700/60 bg-orange-50/60 dark:bg-orange-900/10"><input type="checkbox" id="ack" ${S.ack ? 'checked' : ''} onchange="S.ack=this.checked;ackSync()" class="w-4 h-4 rounded mt-0.5 shrink-0"><span>Başvurumdaki bilgi ve belgelerin doğru olduğunu beyan ederim. <b>Yanlış veya yanıltıcı bilgi/belge verdiğimin anlaşılması hâlinde bursun kesileceğini ve bugüne kadar ödenen burs tutarını yasal faiziyle birlikte geri ödeyeceğimi kabul ediyorum.</b></span></label>`}<div class="flex flex-wrap gap-2 items-center"><button id="subBtn" class="btn-p" ${(ready || S.unlock) && !sent && !termBlocked() && S.ack ? '' : 'disabled'} data-ok="${(ready || S.unlock) && !sent && !termBlocked() ? 1 : 0}" onclick="submitApp()"><span class="ms">send</span> ${sent ? 'Gönderildi' : 'Başvuruyu Onaya Gönder'}</button><span class="text-xs text-gray-500">Durum: ${E(A.status)}${A.sent ? ' · ' + new Date(A.sent).toLocaleString('tr-TR') : ''}</span></div></div>`;
 }
+// ---- çoklu cihaz / sekme: sunucudaki daha yeni kaydı al ----
+function adoptApp(sa) {
+  if (!A) return; const y = scrollY;
+  A.F = F = sa.F; F._a = F._a || {}; A.docs = (sa.docs || []).filter(d => d.k === '?' || L.known(d.k)); A.terms = sa.terms; A.status = sa.status; A.note = sa.note; if (sa.snote) A.snote = sa.snote; A.rev = sa.rev;
+  go(S.tab); scrollTo(0, y);
+}
+async function syncPull() {
+  if (!A || !S.user || S.user.role !== 'student' || dirty || document.hidden || (typeof UQ !== 'undefined' && UQ.run)) return;
+  const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+  try { const d = await api('/api/me'); if (d.app && (d.app.rev || 0) > (A.rev || 0) && !dirty && !UQ.run) adoptApp(d.app); } catch (e) {}
+}
+setInterval(syncPull, 15000); document.addEventListener('visibilitychange', () => { if (!document.hidden) syncPull(); });
 function ackSync() { const b = $('#subBtn'); if (b) b.disabled = !(b.dataset.ok === '1' && S.ack); }
 async function submitApp() {
   if (!S.ack) return toast('Göndermeden önce beyan kutusunu işaretleyin');
   const st = L.steps(F, A.docs, A.terms).find(x => !x.ok); if (st && !S.unlock) return toast(st.why);
-  try { dirty = true; await flushSave(); const d = await api('/api/submit?ack=1' + (st ? '&force=1' : ''), { method: 'POST' }); A.status = d.status; A.sent = Date.now(); toast('Başvuru gönderildi'); confetti(); go('sum'); } catch (e) { toast(e.message); }
+  try { dirty = true; await flushSave(); const d = await api('/api/submit?ack=1' + (st ? '&force=1' : ''), { method: 'POST' }); if (d.rev !== undefined) A.rev = d.rev; A.status = d.status; A.sent = Date.now(); toast('Başvuru gönderildi'); confetti(); go('sum'); } catch (e) { toast(e.message); }
 }
 const AS = { Burs: 'Onaylandı', Yedek: 'Beklemede', Elendi: 'Reddedildi' }, TL = n => Math.round(n || 0).toLocaleString('tr-TR') + ' ₺';
 setInterval(async () => { if (S.user && S.user.role === 'admin' && !document.hidden && !($('#adet') || {}).innerHTML) { try { S.adm.list = (await api('/api/admin/apps')).apps.filter(a => window.DEMO || !a.demo); admTable(); } catch (e) {} } }, 10000);
