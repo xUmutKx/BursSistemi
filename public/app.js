@@ -46,7 +46,7 @@ async function boot() {
   render();
   if (S.token) { try { const d = await api('/api/me'); setUser(d); render(); } catch (e) { if (e.status === 401 || e.status === 403) { S.token = ''; localStorage.removeItem(TK); } } }
 }
-function setUser(d) { S.user = d.user; if (d.cfg) { L.setCustom(d.cfg.custom); S.term = d.cfg.term; } S.demoUser = !!d.demo; if (d.app) { A = S.app = d.app; F = A.F; F._a = F._a || {}; A.docs = (A.docs || []).filter(d => d.k === '?' || L.known(d.k)); S.tab = firstOpen(); } if (d.user.role === 'admin') loadAdmin(); }
+function setUser(d) { S.user = d.user; if (d.cfg) { L.setCustom(d.cfg.custom); S.term = d.cfg.term; } S.demoUser = !!d.demo; if (d.app) { A = S.app = d.app; F = A.F; F._a = F._a || {}; { const u = d.user; let ch = false; if (u.role === 'student') { if (!(F.tc || '').trim()) { F.tc = u.tc; ch = true; } if (!(F.ad || '').trim() && u.name && u.name !== u.tc) { F.ad = u.name; ch = true; } } if (ch) setTimeout(() => { try { save(); } catch (e) {} }, 300); } A.docs = (A.docs || []).filter(d => d.k === '?' || L.known(d.k)); S.tab = firstOpen(); } if (d.user.role === 'admin') loadAdmin(); }
 let loging = false;
 async function login() {
   if (loging) return;
