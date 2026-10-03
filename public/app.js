@@ -260,12 +260,23 @@ function render() {
   const st_ = S.user && S.user.role === 'student'; $('#bnav').classList.toggle('hidden', !st_); document.body.classList.toggle('has-bnav', !!st_);
   scrollTo(0, 0);
 }
+const DOCS_TTO = ['Vesikalık fotoğraf (1 adet) ve nüfus cüzdanı (kimlik) fotokopisi', 'İkametgâh – e-Devlet “Yerleşim Yeri ve Diğer Adres Belgesi”', 'ÖSYM TYT/AYT sonuç ve yerleştirme belgesi (yalnız 1. sınıfa yeni başlayanlar)', 'Güncel öğrenci belgesi (e-Devlet, YÖK)', 'Son dönem transkript (1. sınıfa yeni başlayanlar hariç herkes)', 'KYK burs/kredi durumu (e-Devlet)', 'Vukuatlı nüfus kayıt örneği (e-Devlet, tüm aile)', 'Yurtta kalan için yurt belgesi; kirada kalan için kira kontratı (ailenin evi kiraysa onun da)', 'Anne ve baba: SGK tescil ve hizmet dökümü (barkodlu), bordro (çalışıyorsa), 4A/4B/4C emekli aylık bilgisi, e-Vergi levhası', 'Anne/baba vefat ettiyse öğrencinin kendi 4A, 4B, 4C bilgisi', 'Öğrenci, anne ve baba: tapu bilgileri, tescilli araç sorgulama, adli sicil kaydı', 'Kaydı olmayan her sorgu için “kaydınız yoktur” yazan, isim görünen e-Devlet ekranı zorunludur'];
+const condCard = () => `<div class="card p-5 mb-4 border-primary-200 dark:border-primary-800/50">
+  <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-2"><span class="ms text-primary-500">gavel</span>Başvuru Şartları</h3>
+  <ul class="space-y-1.5 text-[13px] text-gray-700 dark:text-gray-300">
+   <li class="flex gap-2"><span class="ms text-primary-500 text-base">check_circle</span><span><b>Yalnızca Tekirdağ Namık Kemal Üniversitesi Tıp Fakültesi</b> öğrencileri başvurabilir (Tekirdağ’daki devlet üniversitesi tıp fakültesinde aktif öğrenim gören tıp öğrencileri).</span></li>
+   <li class="flex gap-2"><span class="ms text-primary-500 text-base">check_circle</span><span>Burs <b>10 ay</b> süreyle bağlanır; kaynaklar yetersiz kalırsa süreden önce kesilebilir.</span></li>
+   <li class="flex gap-2"><span class="ms text-primary-500 text-base">check_circle</span><span>e-Devlet belgeleri <b>barkodlu orijinal PDF</b> ve son 30 gün içinde alınmış olmalı; ekran görüntüsü de kabul edilir. Başkasına ait ya da değiştirilmiş belge kabul edilmez.</span></li>
+   <li class="flex gap-2"><span class="ms text-primary-500 text-base">check_circle</span><span>Yanıltıcı bilgi/belge verilirse burs kesilir, ödenen tutarlar yasal faiziyle geri alınır.</span></li></ul>
+  <details class="mt-3 text-[13px]"><summary class="cursor-pointer font-semibold text-primary-600">İstenen belgeler (${DOCS_TTO.length} madde)</summary><ol class="list-decimal pl-5 mt-2 space-y-1 text-gray-700 dark:text-gray-300">${DOCS_TTO.map(x => `<li>${x}</li>`).join('')}</ol></details>
+  <p class="text-[11px] text-gray-500 mt-3">Kaynak: <a class="underline" href="https://www.tto.org.tr/ogrenci-bursu" target="_blank" rel="noopener">tto.org.tr/ogrenci-bursu</a> · Tekirdağ Tabip Odası · +90 282 261 89 81 · tekirdagtabip@gmail.com</p></div>`;
 function vLogin() {
   return `<div class="w-full max-w-md mx-auto my-4 sm:my-10"><div class="stg">
   <div class="text-center mb-6"><img src="logo-light.png" alt="Tekirdağ Tabip Odası" class="hero-logo dark:hidden" draggable="false" onclick="logoTap(this)"><img src="logo-dark.png" alt="Tekirdağ Tabip Odası" class="hero-logo hidden dark:block" draggable="false" onclick="logoTap(this)">
    <h2 class="text-3xl font-bold tracking-tight"><span class="grad-t">E-Burs Portalı</span></h2>
    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Tekirdağ Tabip Odası Tıp Bursu başvuru sistemi</p>
    </div>${termBanner(0)}
+  ${condCard()}
   <div class="card p-5 sm:p-7" id="lcard"><form class="space-y-4" id="lform" autocomplete="on" onsubmit="login();return false" novalidate>
    <div><label class="lbl">T.C. Kimlik No / YKN</label><div class="ifield"><span class="ms lead">badge</span><input id="lt" name="username" value="${E(S.lt || '')}" oninput="S.lt=this.value" class="inp py-3" placeholder="T.C. Kimlik No veya YKN" inputmode="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();$('#lp').focus()}"></div></div>
    <div><label class="lbl">Şifre</label><div class="ifield"><span class="ms lead">key</span><input id="lp" name="password" type="password" value="${E(S.lp || '')}" oninput="S.lp=this.value" class="inp py-3 pr-11" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"><button type="button" class="eye" onclick="const p=$('#lp'),s=p.type==='password';p.type=s?'text':'password';this.innerHTML='<span class=&quot;ms&quot;>visibility'+(s?'_off':'')+'</span>'"><span class="ms">visibility</span></button></div></div>
@@ -281,7 +292,7 @@ function vRegister() {
   const i = (id, l, t = 'text', x = '') => `<div><label class="lbl">${l}</label><input id="${id}" type="${t}" class="inp" ${x}></div>`;
   return `<div class="w-full max-w-2xl mx-auto my-6 fade-in"><div class="card shadow-lg p-6 sm:p-8"><div class="mb-6 flex justify-between items-center border-b border-gray-100 dark:border-amoled-border pb-4"><div><h2 class="text-2xl font-bold text-gray-900 dark:text-white">Yeni Kayıt</h2><p class="text-sm text-gray-500 mt-1">Lütfen tüm alanları doldurun.</p></div><button onclick="S.mode='in';render()" class="text-gray-400 hover:text-gray-600"><span class="ms text-xl">close</span></button></div>
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="lbl" id="rtl">T.C. Kimlik No</label><input id="rt" type="text" class="inp" maxlength="11" inputmode="numeric"><label class="flex items-center gap-2 mt-2 text-xs cursor-pointer"><input type="checkbox" id="rfor" onchange="foreignToggle(this.checked)" class="w-4 h-4 rounded"> Yabancı uyruklu öğrenciyim</label></div>${i('rn', 'Ad Soyad')}${i('re', 'E-posta', 'email')}${i('rtel', 'Cep Telefonu', 'tel')}
-  <div class="sm:col-span-2"><label class="lbl">Üniversite / Fakülte</label><select id="ru" class="inp"><option>${UNI}</option></select><p class="text-[11px] text-gray-500 mt-1">Yalnızca Tekirdağ Namık Kemal Üniversitesi Tıp Fakültesi öğrencileri başvurabilir.</p></div>
+  <div class="sm:col-span-2"><input id="ru" type="hidden" value="${UNI}"><p class="text-xs text-gray-500 flex gap-2"><span class="ms text-primary-500">info</span><span>Yalnızca <b>Tekirdağ Namık Kemal Üniversitesi Tıp Fakültesi</b> öğrencileri başvurabilir.</span></p></div>
   <div class="sm:col-span-2"><label class="lbl">E-posta doğrulama kodu</label><div class="flex flex-wrap gap-2"><input id="rk" class="inp flex-1 min-w-[8rem]" inputmode="numeric" maxlength="6" placeholder="6 haneli kod"><button type="button" class="btn whitespace-nowrap shrink-0" onclick="sendCode('#re','#rk')"><span class="ms">mail</span> Kod gönder</button></div></div>${i('rp', window.DEMO ? 'Şifre' : 'Şifre (en az 8 karakter)', 'password')}${i('rp2', 'Şifre Tekrar', 'password')}</div>
   <div class="mt-6 flex justify-end gap-3"><button onclick="S.mode='in';render()" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">İptal</button><button onclick="register()" class="btn-p">Kaydı Tamamla</button></div></div></div>`;
 }
@@ -558,7 +569,7 @@ async function admApprove() {
   if (!confirm(t.length + ' öğrenci “Onaylandı” yapılsın mı? (Kontenjan: ' + S.adm.set.quota + ')')) return;
   for (const r of t) await api('/api/admin/app/' + (r.a.uid || r.a.F.tc), { method: 'PUT', json: { status: 'Onaylandı' } }); toast(t.length + ' başvuru onaylandı'); loadAdmin();
 }
-async function admSeed() { try { await api('/api/admin/seed?n=50', { method: 'POST' }); toast('50 örnek (demo) başvuru eklendi'); loadAdmin(); } catch (e) { toast(e.message); } }
+async function admSeed() { toast('Örnek veri ekleniyor… (birkaç saniye sürebilir)'); try { await api('/api/admin/seed?n=30', { method: 'POST' }); toast('30 örnek (demo) başvuru eklendi'); loadAdmin(); } catch (e) { toast(e.message); } }
 async function admDemoDel() { if (!confirm('Tüm demo kayıtlar silinsin mi?')) return; try { const d = await api('/api/admin/demo', { method: 'DELETE' }); toast(d.n + ' demo kayıt silindi'); loadAdmin(); } catch (e) { toast(e.message); } }
 async function admWipe() {
   if (!confirm('Tüm başvurular, öğrenci hesapları ve yüklenen belgeler kalıcı olarak silinsin mi?') || !confirm('Bu işlem geri alınamaz. Emin misiniz?')) return;

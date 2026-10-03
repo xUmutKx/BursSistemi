@@ -68,3 +68,4 @@ v11 NOTLARI (belge doğruluğu + güvenlik)
 - Yönetici: başvuru ayrıntısında her belgenin yanında "Sil" (dosya sunucudan da silinir).
 - Hız: PDF'ler OCR'sız saniyeler içinde okunur; ekran görüntüleri için OCR çözünürlüğü düşürüldü.
 - v11.1: Hazırlık sınıfı kaldırıldı. Anne/baba T.C. isteğe bağlı (yabancı uyruklu olabilir). Giriş alanı "T.C. Kimlik No / YKN" (tam klavye; yönetici de bu alandan girer). Demo oturumu yenilemede açık kalır. Demo örnek veri gerçekçi e-Devlet/ÖSYM/transkript görünümlü belgelerle (barkod, karekod, notlar) otomatik gelir.
+- v11.2: Kayıtta üniversite seçimi kaldırıldı (tek seçenek). Giriş ekranında herkese görünen 'Başvuru Şartları' kartı (tto.org.tr/ogrenci-bursu + resmi belge listesi). 'Örnek veri' düğmesi hızlandırıldı (tek IndexedDB bağlantısı, 30 kayıt).

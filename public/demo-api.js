@@ -27,7 +27,7 @@
     }
   }
   const fclear = async () => { try { const d = await idb(); await new Promise(res => { const t = d.transaction('f', 'readwrite'); t.objectStore('f').clear(); t.oncomplete = res; t.onerror = res; }); } catch (e) {} };
-  const idb = () => new Promise((res, rej) => { const r = indexedDB.open(LIVE ? 'burs_live_files' : 'burs_demo_files', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  let idbP = null; const idb = () => idbP || (idbP = new Promise((res, rej) => { const r = indexedDB.open(LIVE ? 'burs_live_files' : 'burs_demo_files', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => { r.result.onclose = r.result.onversionchange = () => { idbP = null; }; res(r.result); }; r.onerror = () => { idbP = null; rej(r.error); }; }));
   const fput = async (k, v) => { const d = await idb(); return new Promise((res, rej) => { const t = d.transaction('f', 'readwrite'); t.objectStore('f').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); };
   const fget = async k => { const d = await idb(); return new Promise((res, rej) => { const q = d.transaction('f').objectStore('f').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); };
   const fdel = async k => { try { const d = await idb(); d.transaction('f', 'readwrite').objectStore('f').delete(k); } catch (e) {} };
@@ -94,7 +94,7 @@
       if (p === '/api/admin/all' && m === 'DELETE') { const n = Object.keys(db.apps).length; db.apps = {}; Object.keys(db.users).forEach(k => { if (k !== 'admin') delete db.users[k]; }); db.settings = null; db.seeded = 1; await fclear(); await save(); return R(200, { ok: true, n }); }
       if (p === '/api/admin/apps') return R(200, { apps: Object.entries(db.apps).filter(([k]) => db.users[k] && db.users[k].role === 'student').map(([k, a]) => adminView(a, k)) });
       if (p === '/api/admin/settings') { if (m === 'PUT') { db.settings = L.mergeSet(b.settings); await save(); return R(200, { ok: true, settings: db.settings }); } return R(200, { settings: db.settings }); }
-      if (p === '/api/admin/seed' && m === 'POST') { if (LIVE) return R(403, { error: 'Bu işlem yalnızca demo modunda kullanılabilir' }); seed(+url.searchParams.get('n') || 12); await Promise.all(jobs); await save(); return R(200, { ok: true }); }
+      if (p === '/api/admin/seed' && m === 'POST') { if (LIVE) return R(403, { error: 'Bu işlem yalnızca demo modunda kullanılabilir' }); seed(+url.searchParams.get('n') || 12); await Promise.all(jobs.splice(0)); await save(); return R(200, { ok: true }); }
       if (p === '/api/admin/demo' && m === 'DELETE') { let n = 0; Object.values(db.users).filter(x => x.demo).forEach(x => { delete db.apps[x.tc]; delete db.users[x.tc]; n++; }); await save(); return R(200, { ok: true, n }); }
       const dm = p.match(/^\/api\/admin\/app\/(\d+)\/doc\/([^/]+)$/);
       if (dm && m === 'DELETE' && db.apps[dm[1]]) { const a = db.apps[dm[1]], id = decodeURIComponent(dm[2]); if (!(a.docs || []).some(x => x.id === id)) return R(404, { error: 'Belge yok' }); a.docs = a.docs.filter(x => x.id !== id); if (a.status === 'Beklemede') a.status = 'Eksik belge'; a.updated = Date.now(); await save(); return R(200, { ok: true }); }
