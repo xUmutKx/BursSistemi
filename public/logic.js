@@ -279,7 +279,29 @@
     });
     if (!ck.some(c => c.t === 'bad')) ck.push({ t: 'ok', m: 'Belge ölçütleri sağlandı' });
   }
-  L.analyze = (text, F, srcType, now, force) => {
+  // ---- PDF kaynak doğrulama: e-Devlet / ÖSYM çıktısı mı, sonradan düzenlenmiş mi? (yalnız PDF; ekran görüntüsü muaf) ----
+  const EDEV = ['ikamet', 'ogrenci', 'kyk', 'tescil', 'a4a', 'a4b', 'a4c', 'nufus', 'adli', 'tapu', 'arac', 'vergi', 'yurt'], OSYM = ['sinav', 'yerles'];
+  const GEN = /jasper|telerik|itext|openpdf|stimulsoft|sgk|^\s*\d{6,}\s*$/i;
+  const EDITOR = /word|excel|powerpoint|libreoffice|openoffice|collabora|\bdraw\b|\bwriter\b|canva|photoshop|illustrator|indesign|acrobat|adobe pdf library|ilovepdf|smallpdf|sejda|pdfescape|pdf-?xchange|foxit|nitro|print to pdf|quartz|\bpages\b|wps|cairo|wkhtml|reportlab|fpdf|pdfkit|mpdf|dompdf|pdf24|sodapdf|ghostscript|imagemagick|gimp|inkscape|scribus|affinity|puppeteer|headless/i;
+  const CODES = [/\b(NV0\d-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})\b/, /\b(YOK[A-Z0-9]{12,})\b/, /\b(KYK[A-Z0-9]{10,})\b/, /\b(SGK[A-Z0-9]{12,})\b/, /\b(ADB\d{8,})\b/, /\b(hd[0-9a-f]{16,})\b/, /Kontrol Kodu\s*:\s*([A-Z0-9]{6,})/i];
+  const pdate = s => { const m = String(s || '').match(/(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?(\d{2})?/); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)) : 0; };
+  L.pdfMeta = async pdf => { try { const i = (await pdf.getMetadata()).info || {}; return { c: String(i.Creator || '').slice(0, 120), p: String(i.Producer || '').slice(0, 120), cd: String(i.CreationDate || '').slice(0, 30), md: String(i.ModDate || '').slice(0, 30) }; } catch (e) { return {}; } };
+  L.pdfCode = raw => { for (const re of CODES) { const m = String(raw || '').match(re); if (m) return m[1]; } return ''; };
+  L.origin = (meta, raw, k, now) => {
+    const isE = EDEV.includes(k), isO = OSYM.includes(k); if (!isE && !isO) return [];
+    meta = meta || {}; now = now || Date.now(); const U = N(raw || ''), tag = (t, m) => [{ t, m, o: 1 }], who = [meta.c, meta.p].filter(Boolean).join(' / ') || 'bilinmiyor', code = L.pdfCode(raw);
+    if (U.replace(/[^A-Z0-9]/g, '').length < 40) return tag('bad', 'PDF’de okunabilir metin yok (tarama/fotoğraf PDF’i). Belgeyi e-Devlet’ten doğrudan indirdiğiniz orijinal PDF olarak yükleyin (ekran görüntüsü de kabul edilir).');
+    const stmt = isE ? /BELGE-?DOGRULAMA|BARKODLU BELGE/.test(U) : /BELGEKONTROL|KONTROL KODU/.test(U);
+    if (!stmt) return tag('bad', isE ? 'Belgede e-Devlet barkod doğrulama ifadesi yok – e-Devlet’ten alınmış orijinal belge değil.' : 'Belgede ÖSYM belge kontrol kodu yok – ÖSYM’den alınmış orijinal belge değil.');
+    const ed = EDITOR.test(who) && !GEN.test(who) && !(isO && /skia|chrome/i.test(who));
+    if (ed) return code ? tag('warn', 'PDF bir düzenleme programında kaydedilmiş (' + who + ') – değiştirilmiş olabilir; yönetici “' + code + '” koduyla turkiye.gov.tr/belge-dogrulama’dan doğrulamalı.') : tag('bad', 'PDF bir düzenleme programında oluşturulmuş/değiştirilmiş (' + who + ') – e-Devlet’ten indirdiğiniz orijinal PDF’i yükleyin.');
+    const cd = pdate(meta.cd), md = pdate(meta.md);
+    if (isE && cd && (now - cd) / 864e5 > 30) return tag('bad', 'PDF dosyası ' + new Date(cd).toISOString().slice(0, 10) + ' tarihinde oluşturulmuş – 30 günden eski; güncel belge gerekli.');
+    if (md && cd && md - cd > 120000) return tag('warn', 'PDF oluşturulduktan sonra değiştirilmiş görünüyor (' + who + ').');
+    if (!code) return tag('warn', 'Barkod/doğrulama kodu okunamadı – yönetici belgeyi ayrıca kontrol eder.');
+    return tag('ok', (isE ? 'e-Devlet barkodlu orijinal PDF' : 'ÖSYM kontrol kodlu orijinal PDF') + ' (kod ' + code + ')');
+  };
+  L.analyze = (text, F, srcType, now, force, meta) => {
     F = F || {}; const raw = text || '', U = N(raw), ck = [], info = [], P = []; now = now || Date.now();
     let c; const fd = force && L.D.find(d => d.k === force.k), fo = fd && fd.custom ? (fd.ocr || {}) : null;
     if (fo && fo.off) return { k: force.k, w: force.w, ck: [{ t: 'ok', m: 'Belge yüklendi' }], info: [], patches: [] };
@@ -310,6 +332,8 @@
     if (!D.custom) extract(c.k, w, raw, U, F, P, info, ck); else if (w !== '?') customCheck(D, raw, U, ck, P, info, srcType, now);
     if (w === '?' || ck.some(x => x.t === 'bad')) P.length = 0;
     if (FRESH.includes(c.k) && srcType !== 'img') ageCheck(raw, U, srcType, now, 30, ck, true);
+    if (srcType === 'pdf') ck.push(...L.origin(meta, raw, c.k, now));
+    if (ck.some(x => x.t === 'bad')) P.length = 0;
     return { k: c.k, w, ck, info, patches: P };
   };
 
@@ -335,8 +359,8 @@
   L.refresh = (F, docs, now) => {
     docs.forEach(d => {
       if (!d.k || d.k === '?' || d.k === 'foto' || !d.text || !L.D.some(x => x.k === d.k)) return;
-      if (d.w === '?') { const a = L.analyze(d.text, F, d.src || 'x', now); if (a.k === d.k && a.w !== '?') { d.w = a.w; d.id = d.k + ':' + a.w; d.ck = a.ck; d.info = a.info; L.apply(F, a.patches); } }
-      else d.ck = L.analyze(d.text, F, d.src || 'x', now, { k: d.k, w: d.w }).ck;
+      if (d.w === '?') { const a = L.analyze(d.text, F, d.src || 'x', now, undefined, d.meta); if (a.k === d.k && a.w !== '?') { d.w = a.w; d.id = d.k + ':' + a.w; d.ck = a.ck; d.info = a.info; L.apply(F, a.patches); } }
+      else d.ck = L.analyze(d.text, F, d.src || 'x', now, { k: d.k, w: d.w }, d.meta).ck;
     });
     const seen = {}; for (let i = docs.length - 1; i >= 0; i--) { const d = docs[i]; if (d.w !== '?' && seen[d.id]) docs.splice(i, 1); else seen[d.id] = 1; }
     return docs;
@@ -346,8 +370,8 @@
   L.REQF = REQ0.slice();
   L.idMiss = F => { const nt = s => (s || '').trim().split(/\s+/).filter(x => x.length > 1).length, tcok = s => /^\d{11}$/.test((s || '').trim()) || /^[A-Za-z0-9]{5,20}$/.test((s || '').trim()), m = [];
     if (nt(F.ad) < 2) m.push('öğrenci adı-soyadı'); if (!tcok(F.tc)) m.push('öğrenci T.C. / yabancı kimlik no'); if (!F.sinif) m.push('sınıf');
-    if (nt(F['anne.ad']) < 1) m.push('anne adı'); if (!tcok(F['anne.tc'])) m.push('anne T.C. / yabancı kimlik no'); if (!F['anne.hayat']) m.push('anne hayatta mı');
-    if (nt(F['baba.ad']) < 1) m.push('baba adı'); if (!tcok(F['baba.tc'])) m.push('baba T.C. / yabancı kimlik no'); if (!F['baba.hayat']) m.push('baba hayatta mı'); return m; };
+    if (nt(F['anne.ad']) < 1) m.push('anne adı'); if ((F['anne.tc'] || '').trim() && !tcok(F['anne.tc'])) m.push('anne T.C. / yabancı kimlik no (yoksa boş bırakın)'); if (!F['anne.hayat']) m.push('anne hayatta mı');
+    if (nt(F['baba.ad']) < 1) m.push('baba adı'); if ((F['baba.tc'] || '').trim() && !tcok(F['baba.tc'])) m.push('baba T.C. / yabancı kimlik no (yoksa boş bırakın)'); if (!F['baba.hayat']) m.push('baba hayatta mı'); return m; };
   L.steps = (F, docs, terms) => {
     const pr = L.progress(F, docs), im = L.idMiss(F), bad = docs.filter(d => L.dstat(d) === 'bad').length, fm = L.REQF.filter(k => !['ad', 'tc', 'sinif'].includes(k) && !String(F[k] || '').trim());
     return [

@@ -1,19 +1,19 @@
 'use strict';
 const UNI = 'Tekirdağ Namık Kemal Üniversitesi – Tıp Fakültesi';
-const SINIF = ['Hazırlık', '1. sınıf', '2. sınıf', '3. sınıf', '4. sınıf', '5. sınıf', '6. sınıf'];
+const SINIF = ['1. sınıf', '2. sınıf', '3. sınıf', '4. sınıf', '5. sınıf', '6. sınıf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
 const $ = s => document.querySelector(s);
 const E = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const { N, tcase, WN, D, SL } = L;
-try { if (window.DEMO) { localStorage.removeItem('tto_token'); localStorage.removeItem('tto_help_admin'); } } catch (e) {}
-const S = { user: null, token: (window.DEMO ? '' : localStorage.tto_token) || '', app: null, tab: 'terms', f: { q: '', st: 'all', who: 'all', cat: 'all' }, mode: 'in', log: '', adm: { list: [], set: null, view: 'list', rows: [], q: '', st: 'all', cls: 'all', kind: 'all', res: 'all', miss: false, incMin: '', incMax: '', pcMax: '', house: 'all', car: 'all', sibMin: '', gnoMin: '', dead: false, away: false, dis: false, sort: 'rank', dir: 1, sel: null } };
+const TK = window.DEMO ? 'tto_token_demo' : 'tto_token';
+const S = { user: null, token: (() => { try { return localStorage[TK]; } catch (e) { return ''; } })() || '', app: null, tab: 'terms', f: { q: '', st: 'all', who: 'all', cat: 'all' }, mode: 'in', log: '', adm: { list: [], set: null, view: 'list', rows: [], q: '', st: 'all', cls: 'all', kind: 'all', res: 'all', miss: false, incMin: '', incMax: '', pcMax: '', house: 'all', car: 'all', sibMin: '', gnoMin: '', dead: false, away: false, dis: false, sort: 'rank', dir: 1, sel: null } };
 let F, A;
 
 const toast = m => { const t = $('#tt'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), 3200); };
 async function api(p, o = {}) {
   const r = await fetch(p, { method: o.method || 'GET', headers: Object.assign({ 'X-Mode': window.MODE }, S.token ? { Authorization: 'Bearer ' + S.token } : {}, o.json ? { 'Content-Type': 'application/json' } : {}, o.headers || {}), body: o.json ? JSON.stringify(o.json) : o.body });
   const d = await r.json().catch(() => ({}));
-  if (r.status === 401 && S.user) { S.user = null; S.token = ''; localStorage.removeItem('tto_token'); render(); toast('Oturum süresi doldu'); }
+  if (r.status === 401 && S.user) { S.user = null; S.token = ''; localStorage.removeItem(TK); render(); toast('Oturum süresi doldu'); }
   if (!r.ok) { const e = new Error(d.error || 'Sunucu hatası (' + r.status + ')'); e.status = r.status; throw e; }
   return d;
 }
@@ -38,13 +38,13 @@ const dico = { ok: 'check_circle', warn: 'warning', bad: 'cancel' };
 function toggleTheme() { const d = document.documentElement.classList.toggle('dark'); localStorage.theme = d ? 'dark' : 'light'; themeIcon(); }
 function themeIcon() { $('#themeIcon').textContent = document.documentElement.classList.contains('dark') ? 'light_mode' : 'dark_mode'; }
 function home() { render(); }
-async function logout() { try { await flushSave(); await api('/api/logout', { method: 'POST' }); } catch (e) {} S.user = null; S.unlock = 0; S.token = ''; A = F = null; localStorage.removeItem('tto_token'); S.mode = 'in'; render(); }
+async function logout() { try { await flushSave(); await api('/api/logout', { method: 'POST' }); } catch (e) {} S.user = null; S.unlock = 0; S.token = ''; A = F = null; localStorage.removeItem(TK); S.mode = 'in'; render(); }
 function chrome() { const c = $('#demoChip'); if (c) c.classList.toggle('hidden', !window.DEMO); }
 async function boot() {
   themeIcon(); chrome();
   try { const c = await api('/api/cfg'); applyLock(c.lock); S.term = c.term; chrome(); } catch (e) {}
   render();
-  if (S.token) { try { const d = await api('/api/me'); setUser(d); render(); } catch (e) { if (e.status === 401 || e.status === 403) { S.token = ''; localStorage.removeItem('tto_token'); } } }
+  if (S.token) { try { const d = await api('/api/me'); setUser(d); render(); } catch (e) { if (e.status === 401 || e.status === 403) { S.token = ''; localStorage.removeItem(TK); } } }
 }
 function setUser(d) { S.user = d.user; if (d.cfg) { L.setCustom(d.cfg.custom); S.term = d.cfg.term; } S.demoUser = !!d.demo; if (d.app) { A = S.app = d.app; F = A.F; F._a = F._a || {}; A.docs = (A.docs || []).filter(d => d.k === '?' || L.known(d.k)); S.tab = firstOpen(); } if (d.user.role === 'admin') loadAdmin(); }
 let loging = false;
@@ -57,7 +57,7 @@ async function login() {
   const btn0 = '<span>Giriş Yap</span><span class="ms">arrow_forward</span>';
   if (b) { b.disabled = true; b.innerHTML = '<span class="ms spin">progress_activity</span><span>Giriş yapılıyor…</span>'; }
   S.lt = tc; S.lp = pw;
-  try { const d = await api('/api/login', { method: 'POST', json: { tc, pw } }); S.token = d.token; localStorage.tto_token = d.token; const me = await api('/api/me'); S.lt = S.lp = ''; setUser(me); render(); }
+  try { const d = await api('/api/login', { method: 'POST', json: { tc, pw } }); S.token = d.token; localStorage[TK] = d.token; const me = await api('/api/me'); S.lt = S.lp = ''; setUser(me); render(); }
   catch (e) {
     S.user = null; const b2 = $('#lbtn'), er2 = $('#lerr'); if (er2) er2.textContent = e.message; toast(e.message);
     const c = $('#lcard'); if (c) { c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }
@@ -133,15 +133,15 @@ async function thumbOnly(f) {
 }
 async function readFile(f) {
   if (/pdf/i.test(f.type) || /\.pdf$/i.test(f.name)) {
-    const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise, n = Math.min(pdf.numPages, 8), pages = []; let txt = '';
+    const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise, n = Math.min(pdf.numPages, 8), pages = [], meta = await L.pdfMeta(pdf); let txt = '';
     for (let i = 1; i <= n; i++) { const pg = await pdf.getPage(i); pages.push(pg); txt += L.lines((await pg.getTextContent()).items) + '\n'; }
-    if (txt.trim().length >= 30) { const c = await pageCanvas(pages[0], 360); return { text: txt, thumb: c.toDataURL('image/jpeg', .55), src: 'pdf' }; }
-    const cs = []; for (const pg of pages.slice(0, 3)) cs.push(await pageCanvas(pg, 1500));
+    if (txt.trim().length >= 30) { const c = await pageCanvas(pages[0], 360); return { text: txt, thumb: c.toDataURL('image/jpeg', .55), src: 'pdf', meta }; }
+    const cs = []; for (const pg of pages.slice(0, 3)) cs.push(await pageCanvas(pg, 1300));
     const th = thumbOf(cs[0], cs[0].width, cs[0].height, 360);
-    return { text: (await Promise.all(cs.map(ocr))).join('\n'), thumb: th, src: 'pdf' };
+    return { text: (await Promise.all(cs.map(ocr))).join('\n'), thumb: th, src: 'pdf', meta };
   }
   const bm = await createImageBitmap(f).catch(async () => { const im = new Image(), u = URL.createObjectURL(f); im.src = u; await im.decode(); URL.revokeObjectURL(u); return im; });
-  const sc = Math.min(1, 1700 / bm.width), c = document.createElement('canvas'); c.width = Math.round(bm.width * sc); c.height = Math.round(bm.height * sc);
+  const sc = Math.min(1, 1400 / bm.width), c = document.createElement('canvas'); c.width = Math.round(bm.width * sc); c.height = Math.round(bm.height * sc);
   const x = c.getContext('2d'); x.filter = 'grayscale(1) contrast(1.2)'; x.drawImage(bm, 0, 0, c.width, c.height); x.filter = 'none';
   const th = thumbOf(bm, bm.width, bm.height, 360); if (bm.close) bm.close();
   const d = x.getImageData(0, 0, c.width, Math.min(c.height, 600)).data; let sm = 0, n = 0; for (let i = 0; i < d.length; i += 16) { sm += d[i] + d[i + 1] + d[i + 2]; n += 3; }
@@ -167,7 +167,7 @@ function pump() {
 const sig = t => N(t || '').replace(/[^A-Z0-9]/g, '').slice(0, 500);
 function mergeInto(ex, d) {
   ex.text = ((ex.text || '') + '\n' + (d.text || '')).slice(0, 16000);
-  const m = L.analyze(ex.text, F, ex.src || 'x', Date.now(), { k: ex.k, w: ex.w });
+  const m = L.analyze(ex.text, F, ex.src || 'x', Date.now(), { k: ex.k, w: ex.w }, ex.meta);
   ex.ck = m.ck; ex.info = m.info; L.apply(F, m.patches);
   ex.extra = (ex.extra || []).concat([{ name: d.name, file: d.file }]);
 }
@@ -179,10 +179,10 @@ async function one0({ f, slot }, pp) {
   const s = slot && SL.find(x => x.id === slot);
   const up0 = api('/api/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' } }); up0.catch(() => {});
   const r = await (s && (s.k === 'foto' || (s.custom && s.ocr && s.ocr.off)) ? thumbOnly(f) : readFile(f));
-  const a = L.analyze(r.text, F, r.src, Date.now(), s ? { k: s.k, w: s.w } : undefined);
+  const a = L.analyze(r.text, F, r.src, Date.now(), s ? { k: s.k, w: s.w } : undefined, r.meta);
   let k = a.k || '?', w = a.w;
   const up = await up0; if (!A) return;
-  const nd = { name: f.name, file: up.file, thumb: r.thumb, text: r.text.slice(0, 12000), src: r.src, ts: Date.now(), dark: !!r.dark };
+  const nd = { name: f.name, file: up.file, thumb: r.thumb, text: r.text.slice(0, 12000), src: r.src, ts: Date.now(), dark: !!r.dark, meta: r.meta };
   // 1) aynı belge tekrar yüklendiyse sessizce atla
   const dup = A.docs.find(d => d.k !== 'foto' && d.src !== 'beyan' && d.text && r.text && sig(d.text) === sig(r.text) && sig(r.text).length > 40);
   if (dup) { UQ.dup = (UQ.dup || 0) + 1; pp.end('warn', 'Aynı belge zaten yüklü – atlandı'); return; }
@@ -227,7 +227,7 @@ let rs;
 const renderSoon = () => { if (rs) return; rs = setTimeout(() => { rs = 0; if (A) { renderDocs(); sidebar(); } }, 300); };
 function setLog(t) { S.log = t; const e = $('#lg'); if (e) e.innerHTML = t ? '<span class="ms spin mr-1">progress_activity</span>' + E(t) : ''; }
 function assign(i, w) {
-  const d = A.docs[i], r = L.analyze(d.text, F, d.src || 'x', Date.now(), { k: d.k, w }); A.docs.splice(i, 1); d.w = w; d.id = d.k + ':' + w; d.info = r.info; d.ck = r.ck;
+  const d = A.docs[i], r = L.analyze(d.text, F, d.src || 'x', Date.now(), { k: d.k, w }, d.meta); A.docs.splice(i, 1); d.w = w; d.id = d.k + ':' + w; d.info = r.info; d.ck = r.ck;
   const ex = A.docs.find(x => x.id === d.id && L.dstat(x) !== 'bad');
   if (ex && L.dstat({ ck: r.ck }) === 'bad') mergeInto(ex, d);
   else { A.docs = A.docs.filter(x => x.id !== d.id); A.docs.push(d); L.apply(F, r.patches); }
@@ -267,7 +267,7 @@ function vLogin() {
    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Tekirdağ Tabip Odası Tıp Bursu başvuru sistemi</p>
    </div>${termBanner(0)}
   <div class="card p-5 sm:p-7" id="lcard"><form class="space-y-4" id="lform" autocomplete="on" onsubmit="login();return false" novalidate>
-   <div><label class="lbl">Kimlik No (TCKN) veya Kullanıcı Adı</label><div class="ifield"><span class="ms lead">badge</span><input id="lt" name="username" value="${E(S.lt || '')}" oninput="S.lt=this.value" class="inp py-3" placeholder="TCKN / yabancı kimlik no / kullanıcı adı" inputmode="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();$('#lp').focus()}"></div></div>
+   <div><label class="lbl">T.C. Kimlik No / YKN</label><div class="ifield"><span class="ms lead">badge</span><input id="lt" name="username" value="${E(S.lt || '')}" oninput="S.lt=this.value" class="inp py-3" placeholder="T.C. Kimlik No veya YKN" inputmode="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();$('#lp').focus()}"></div></div>
    <div><label class="lbl">Şifre</label><div class="ifield"><span class="ms lead">key</span><input id="lp" name="password" type="password" value="${E(S.lp || '')}" oninput="S.lp=this.value" class="inp py-3 pr-11" placeholder="••••••••" autocomplete="current-password" enterkeyhint="go"><button type="button" class="eye" onclick="const p=$('#lp'),s=p.type==='password';p.type=s?'text':'password';this.innerHTML='<span class=&quot;ms&quot;>visibility'+(s?'_off':'')+'</span>'"><span class="ms">visibility</span></button></div></div>
    <p id="lerr" class="text-sm text-red-600 min-h-[1.25rem]"></p><button id="lbtn" type="submit" class="btn-p w-full justify-center py-3.5 text-base rounded-xl"><span>Giriş Yap</span><span class="ms">arrow_forward</span></button>
    <p class="text-center text-sm text-gray-500">Hesabınız yok mu? <a href="#" onclick="S.mode='up';render();return false" class="text-primary-600 hover:underline font-semibold">Kayıt Olun</a></p></form></div>
@@ -288,8 +288,8 @@ function vRegister() {
 
 const ORDER = ['terms', 'id', 'docs', 'form', 'sum'];
 const TABS = [['terms', 'Şartlar', 'description', 'Şartlar'], ['id', 'Kimlik', 'badge', 'Kimlik'], ['docs', 'Belgeler', 'folder_open', 'Belge'], ['form', 'Başvuru Formu', 'quiz', 'Form'], ['sum', 'Özet / Gönder', 'send', 'Gönder']];
-const IDK = ['ad', 'tc', 'sinif', 'anne.ad', 'anne.hayat', 'baba.ad', 'baba.hayat', 'anne.tc', 'baba.tc'];
-const IDF_ = { s: [['ad', 'Adınız – Soyadınız (kimlikteki gibi)', 't'], ['tc', 'T.C. Kimlik No (yabancı uyruklu: Yabancı Kimlik / Pasaport No)', 't'], ['sinif', 'Sınıfınız', 's', 0, SINIF]], m: [['anne.ad', 'Annenizin Adı Soyadı', 't'], ['anne.hayat', 'Anne hayatta mı?', 'y'], ['anne.tc', 'Anne T.C. / Yabancı Kimlik No', 't']], f: [['baba.ad', 'Babanızın Adı Soyadı', 't'], ['baba.hayat', 'Baba hayatta mı?', 'y'], ['baba.tc', 'Baba T.C. / Yabancı Kimlik No', 't']] };
+const IDK = ['ad', 'tc', 'sinif', 'anne.ad', 'anne.hayat', 'baba.ad', 'baba.hayat'], IDOPT = ['anne.tc', 'baba.tc'];
+const IDF_ = { s: [['ad', 'Adınız – Soyadınız (kimlikteki gibi)', 't'], ['tc', 'T.C. Kimlik No (yabancı uyruklu: Yabancı Kimlik / Pasaport No)', 't'], ['sinif', 'Sınıfınız', 's', 0, SINIF]], m: [['anne.ad', 'Annenizin Adı Soyadı', 't'], ['anne.hayat', 'Anne hayatta mı?', 'y'], ['anne.tc', 'Anne T.C. / Yabancı Kimlik No (yoksa boş bırakın)', 't']], f: [['baba.ad', 'Babanızın Adı Soyadı', 't'], ['baba.hayat', 'Baba hayatta mı?', 'y'], ['baba.tc', 'Baba T.C. / Yabancı Kimlik No (yabancı uyrukluysa boş bırakılabilir)', 't']] };
 const gateOf = t => { if (S.unlock) return null; const st = L.steps(F, A.docs, A.terms), i = ORDER.indexOf(t); for (let j = 0; j < i; j++) if (!st[j].ok) return { j, why: st[j].why }; return null; };
 const firstOpen = () => { const i = L.steps(F, A.docs, A.terms).findIndex(x => !x.ok); return i < 0 ? 'sum' : ORDER[i]; };
 function vStudent() {
@@ -332,7 +332,7 @@ function pTerms() {
     'e-Devlet PDF belgeleri <b>son 30 gün içinde alınmış</b> ve barkodlu olmalıdır. Ekran görüntülerinde tarih aranmaz.',
     'Öğrenci, anne ve babanın her biri için <b>adli sicil kaydı</b> (e-Devlet) istenir.',
     'İstenen kayıt yoksa bile (tapu, araç, vergi levhası, 4A/4B/4C, KYK vb.) <b>“kayıt bulunamadı”</b> yazan, isim görünen e-Devlet ekranı zorunludur.',
-    'Hazırlık/1. sınıfa yeni başlayanlar ÖSYM sonuç + yerleştirme belgesi, diğer sınıflar transkript verir.',
+    '1. sınıfa yeni başlayanlar ÖSYM sonuç + yerleştirme belgesi, diğer sınıflar transkript verir.',
     'Anne/baba vefat etmişse onun yerine öğrencinin kendi 4A-4B-4C bilgileri istenir. Çalışan ebeveyn için bordro, emekli için 4A/4B/4C aylık bilgisi gerekir.',
     '<b>Yabancı uyruklu öğrenciler</b> için de burs vardır: T.C. kimlik numarasına bağlı olup sizde bulunmayan belgelerde <b>“Yok / mevcut değil”</b> düğmesiyle belgenin mevcut olmadığını beyan edebilirsiniz.',
     'Yurtta kalan için yurt belgesi, kirada kalan için kira kontratı; ailenin evi kiraysa ailenin kira kontratı eklenir.',
@@ -352,7 +352,7 @@ function fld([k, l, t, , o]) {
   return `<div id="f_${k.replace('.', '_')}"><label class="lbl">${l}${au}</label>${i}</div>`;
 }
 function sf(k, v) { F[k] = v; if (k === 'ailedeMi' && S.tab === 'form') { const y = scrollY; $('#page').innerHTML = pForm(); scrollTo(0, y); } if (F._a[k]) { delete F._a[k]; const el = document.querySelector('#f_' + k.replace('.', '_') + ' span'); if (el) el.remove(); }
-  if (IDK.includes(k)) { clearTimeout(sf.t); sf.t = setTimeout(() => { L.refresh(F, A.docs); save(); stepper(); }, 500); } save(); sidebar(); }
+  if (IDK.includes(k) || IDOPT.includes(k)) { clearTimeout(sf.t); sf.t = setTimeout(() => { L.refresh(F, A.docs); save(); stepper(); }, 500); } save(); sidebar(); }
 const SEC = { 1: 'I – Kimlik ve İletişim Bilgileri', 2: 'II – Eğitim Bilgileri', 3: 'III – Sosyal ve Ekonomik Duruma İlişkin Bilgiler' };
 const PH = { dogum: 'Tekirdağ / 01.01.2003', tel: '05xx xxx xx xx', mail: 'ornek@mail.com', gno: 'Ör: 3,20 (1. sınıfsanız: Yok)', okulno: 'Okul numaranız', giris: 'Ör: 2022', gelir: 'Yoksa boş geçin', cocuk: 'Ör: 0', 'anne.tel': '05xx xxx xx xx', 'baba.tel': '05xx xxx xx xx', 'anne.gelir': 'Ör: 26.000 TL', 'baba.gelir': 'Ör: 30.000 TL', ad: 'Adınız Soyadınız (kimlikteki gibi)', 'anne.ad': 'Ad Soyad', 'baba.ad': 'Ad Soyad' };
 const has = k => String(F[k] || '').trim() !== '';
@@ -510,7 +510,7 @@ function vList() {
    <md-outlined-text-field class="mdw" label="Arama" placeholder="İsim, TCKN, fakülte" value="${E(a.q)}" oninput="admF('q',this.value)"><span slot="leading-icon" class="ms">search</span></md-outlined-text-field>
    <div class="grid grid-cols-2 gap-3">${sel('Sırala', a.sort, [['rank', 'Sıra (kural)'], ['score', 'Puan'], ['total', 'Toplam gelir'], ['pc', 'Kişi başı gelir'], ['houses', 'Ev sayısı'], ['cars', 'Araç sayısı'], ['sib', 'Kardeş'], ['gno', 'Not ort.'], ['docs', 'Belge'], ['sent', 'Başvuru tarihi'], ['name', 'Ad']], 'S.adm.sort=this.value;admTable()')}${sel('Yön', a.dir, [[1, 'Artan'], [-1, 'Azalan']], 'S.adm.dir=+this.value;admTable()')}
    ${sel('Durum', a.st, stOpts, "admF('st',this.value)")}${sel('Sonuç (kural)', a.res, [['all', 'Tümü'], ['Burs', 'Burs'], ['Yedek', 'Yedek'], ['Elendi', 'Elendi']], "admF('res',this.value)")}
-   ${sel('Sınıf', a.cls, [['all', 'Tümü'], ['Hazırlık', 'Hazırlık'], ...[1, 2, 3, 4, 5, 6].map(x => [String(x), x + '. sınıf'])], "admF('cls',this.value)")}${window.DEMO ? sel('Kayıt türü', a.kind, [['all', 'Tümü'], ['real', 'Gerçek'], ['demo', 'Demo']], "admF('kind',this.value)") : ''}</div>
+   ${sel('Sınıf', a.cls, [['all', 'Tümü'], ...[1, 2, 3, 4, 5, 6].map(x => [String(x), x + '. sınıf'])], "admF('cls',this.value)")}${window.DEMO ? sel('Kayıt türü', a.kind, [['all', 'Tümü'], ['real', 'Gerçek'], ['demo', 'Demo']], "admF('kind',this.value)") : ''}</div>
    ${sl('v_inc', 'Toplam gelir', TL(+a.incMin || 0) + ' - ' + (a.incMax ? TL(+a.incMax) : 'sınırsız'), `range min="0" max="${INC_MAX}" step="5000" value-start="${+a.incMin || 0}" value-end="${+a.incMax || INC_MAX}"`, "admSl('inc',this)")}
    ${sl('v_pc', 'Kişi başı gelir en fazla', a.pcMax ? TL(+a.pcMax) : 'sınırsız', `min="0" max="${PC_MAX}" step="500" value="${+a.pcMax || PC_MAX}"`, "admSl('pcMax',this)")}
    ${sl('v_gno', 'Not ortalaması en az', a.gnoMin ? (+a.gnoMin).toFixed(1).replace('.', ',') : 'hepsi', `min="0" max="4" step="0.1" value="${+a.gnoMin || 0}"`, "admSl('gnoMin',this)")}
@@ -524,7 +524,7 @@ function admFiltered() {
   const f = S.adm, rows = admRank(), nq = N(f.q || ''), has = v => v !== '' && !isNaN(+v), cn = (v, x) => v === 'all' || (v === '3' ? x >= 3 : x === +v);
   const l = rows.filter(r => {
     const a = r.a, m = r.m; if (f.st !== 'all' && a.status !== f.st) return 0; if (f.res !== 'all' && r.res !== f.res) return 0; if (f.kind !== 'all' && (f.kind === 'demo') !== !!a.demo) return 0;
-    if (f.cls !== 'all') { const sn = N(a.F.sinif || ''); if (f.cls === 'Hazırlık' ? !/HAZIRLIK/.test(sn) : !new RegExp('(^|\\D)' + f.cls + '([. ]|$)').test(sn)) return 0; }
+    if (f.cls !== 'all') { const sn = N(a.F.sinif || ''); if (!new RegExp('(^|\\D)' + f.cls + '([. ]|$)').test(sn)) return 0; }
     if (f.miss && m.docsOk) return 0; if (has(f.incMin) && m.total < +f.incMin) return 0; if (has(f.incMax) && m.total > +f.incMax) return 0; if (has(f.pcMax) && m.pc > +f.pcMax) return 0;
     if (has(f.gnoMin) && (m.gno === null || m.gno < +f.gnoMin)) return 0; if (!cn(f.house, m.houses) || !cn(f.car, m.cars)) return 0; if (has(f.sibMin) && m.sib < +f.sibMin) return 0;
     if (f.dead && !m.dead) return 0; if (f.away && !m.away) return 0; if (f.dis && !m.dis) return 0;
@@ -574,7 +574,7 @@ async function admOpen(tc) {
   ${r.f.length ? `<div class="p-3 rounded-lg bg-red-50 dark:bg-red-900/10 text-xs text-red-700 dark:text-red-400 mb-3"><b>Eleme nedeni:</b> ${r.f.map(E).join(' · ')}</div>` : ''}
   <div class="flex flex-wrap gap-1.5 mb-3">${['Taslak', 'Beklemede', 'Eksik belge', 'Onaylandı', 'Reddedildi'].map(s => `<span class="chip ${a.status === s ? 'on' : ''}" onclick="admSt('${tc}','${s}')">${s}</span>`).join('')}</div>
   <label class="lbl">Not (öğrenci görür)</label><textarea class="inp" rows="2" onchange="admNote('${tc}',this.value)">${E(a.note || '')}</textarea>
-  <h4 class="text-sm font-bold mt-5 mb-2">Belgeler (${a.docs.length})</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-3">${a.docs.map((x, i) => { const dd = D.find(y => y.k === x.k); return `<div class="flex gap-3 p-2.5 rounded-lg border border-gray-200 dark:border-amoled-border">${x.thumb ? `<img src="${x.thumb}" class="w-14 h-[72px] object-cover rounded cursor-zoom-in" onclick="admPv(${i})">` : ''}<div class="min-w-0 text-xs"><b class="text-sm">${E(dd ? dd.t : 'Tanınmayan')}</b> <span class="text-gray-500">· ${WN[x.w] || '?'}</span><div class="text-gray-400 truncate">${E(x.name)}</div>${(x.info || []).map(t => `<div>- ${E(t)}</div>`).join('')}${(x.ck || []).filter(c => c.t !== 'ok' || /doğrulandı|Güncel/.test(c.m)).map(c => `<div class="${dcls[c.t]}"><span class="ms mr-1">${dico[c.t]}</span>${E(c.m)}</div>`).join('')}${x.file ? `<button class="btn mt-1" onclick="admPv(${i})"><span class="ms">visibility</span> Aç</button>` : ''}</div></div>`; }).join('') || '<p class="text-sm text-gray-500">Belge yok.</p>'}</div>
+  <h4 class="text-sm font-bold mt-5 mb-2">Belgeler (${a.docs.length})</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-3">${a.docs.map((x, i) => { const dd = D.find(y => y.k === x.k); return `<div class="flex gap-3 p-2.5 rounded-lg border border-gray-200 dark:border-amoled-border">${x.thumb ? `<img src="${x.thumb}" class="w-14 h-[72px] object-cover rounded cursor-zoom-in" onclick="admPv(${i})">` : ''}<div class="min-w-0 text-xs"><b class="text-sm">${E(dd ? dd.t : 'Tanınmayan')}</b> <span class="text-gray-500">· ${WN[x.w] || '?'}</span><div class="text-gray-400 truncate">${E(x.name)}</div>${(x.info || []).map(t => `<div>- ${E(t)}</div>`).join('')}${(x.ck || []).filter(c => c.t !== 'ok' || c.o || /doğrulandı|Güncel/.test(c.m)).map(c => `<div class="${dcls[c.t]}"><span class="ms mr-1">${dico[c.t]}</span>${E(c.m)}</div>`).join('')}${x.file ? `<button class="btn mt-1" onclick="admPv(${i})"><span class="ms">visibility</span> Aç</button>` : ''}<button class="btn mt-1 text-red-600" onclick="admDelDoc('${tc}','${E(x.id)}')"><span class="ms">delete</span> Sil</button></div></div>`; }).join('') || '<p class="text-sm text-gray-500">Belge yok.</p>'}</div>
   <h4 class="text-sm font-bold mt-5 mb-2">Form bilgileri</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">${ALLF().map(x => `<div class="flex gap-2 border-b border-gray-100 dark:border-amoled-border py-1"><span class="text-gray-500 w-1/2 shrink-0 text-xs">${x[1]}</span><span class="break-words min-w-0">${E(f[x[0]] || '—').replace(/\n/g, '<br>')}</span></div>`).join('')}</div>
   <div class="mt-5 flex justify-between"><button class="btn text-red-600" onclick="admDel('${tc}')"><span class="ms">delete</span> Başvuruyu sil</button><button class="btn-p" onclick="admClose()">Kapat</button></div></div></div>`;
 }
@@ -582,6 +582,7 @@ function admClose() { $('#adet').innerHTML = ''; loadAdmin(); }
 function admPv(i) { const a = S.adm.sel; pv(i, a.docs[i], a.uid || a.F.tc); $('#pv').style.zIndex = 120; }
 async function admSt(tc, s) { await api('/api/admin/app/' + tc, { method: 'PUT', json: { status: s } }); await admOpen(tc); toast('Durum: ' + s); }
 async function admNote(tc, n) { await api('/api/admin/app/' + tc, { method: 'PUT', json: { note: n } }); toast('Not kaydedildi'); }
+async function admDelDoc(tc, id) { if (!confirm('Bu belge kalıcı silinsin mi? (Dosya sunucudan da kaldırılır)')) return; try { await api('/api/admin/app/' + tc + '/doc/' + encodeURIComponent(id), { method: 'DELETE' }); toast('Belge silindi'); admOpen(tc); } catch (e) { toast(e.message); } }
 async function admDel(tc) { if (!confirm('Bu başvuru ve belgeleri kalıcı silinsin mi?')) return; await api('/api/admin/app/' + tc, { method: 'DELETE' }); admClose(); }
 function xrows() {
   const cols = ALLF(), h = ['Sıra', 'Sonuç', 'Puan', 'Durum', 'Kayıt', 'Kullanıcı adı', 'Hesap e-postası', 'Toplam gelir', 'Kişi başı gelir', 'Ev', 'Araç', 'Kardeş', 'Not ort.', 'Belge', 'Eleme nedeni', ...cols.map(c => c[1])];

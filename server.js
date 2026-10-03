@@ -1,6 +1,6 @@
 'use strict';
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto'), os = require('os');
-const L = require('./public/logic.js'), SG = require('./public/seedgen.js'), mailer = require('./mail.js');
+const L = require('./public/logic.js'), SG = require('./public/seedgen.js'), mailer = require('./mail.js'), vault = require('./vault.js'), pdfcheck = require('./pdfcheck.js');
 const UNI = 'Tekirdağ Namık Kemal Üniversitesi – Tıp Fakültesi', codes = new Map();
 const mkCode = em => { const c = String(crypto.randomInt(0, 1e6)).padStart(6, '0'); codes.set(em, { h: crypto.createHash('sha256').update(c).digest('hex'), exp: Date.now() + 6e5, n: 0, sent: Date.now() }); return c; };
 const okCode = (em, c) => { const v = codes.get(em); if (!v || v.exp < Date.now() || ++v.n > 5) { codes.delete(em); return false; } const ok = same(v.h, crypto.createHash('sha256').update(String(c || '').trim()).digest('hex')); if (ok) codes.delete(em); return ok; };
@@ -10,9 +10,10 @@ const MOD = String(process.env.MOD || 'auto').toLowerCase(), LOCK = MOD === 'can
 const DEMO_TAP = process.env.DEMO_TAP !== '0', AUTO_USER = process.env.AUTO_USER !== '0', TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const PUB = path.join(__dirname, 'public'), DATA = path.join(__dirname, 'data'), UP = path.join(DATA, 'uploads'), BAK = path.join(DATA, 'yedek');
 fs.mkdirSync(UP, { recursive: true }); fs.mkdirSync(BAK, { recursive: true });
+const KEY_ENV = vault.init(DATA);
 const DBF = path.join(DATA, 'db.json');
 let db = { users: {}, apps: {}, sessions: {}, settings: null };
-try { db = Object.assign(db, JSON.parse(fs.readFileSync(DBF, 'utf8'))); } catch (e) {}
+try { db = Object.assign(db, JSON.parse(vault.dec(fs.readFileSync(DBF)).toString('utf8'))); } catch (e) { if (fs.existsSync(DBF)) { console.error('db.json okunamadı (anahtar yanlış olabilir): ' + e.message); process.exit(1); } }
 const curSet = () => L.mergeSet(db.settings);
 L.setCustom(curSet().custom);
 
@@ -21,7 +22,7 @@ let tm = null, lastBak = '';
 const flush = () => {
   clearTimeout(tm);
   try {
-    fs.writeFileSync(DBF + '.tmp', JSON.stringify(db)); fs.renameSync(DBF + '.tmp', DBF);
+    fs.writeFileSync(DBF + '.tmp', vault.enc(Buffer.from(JSON.stringify(db))), { mode: 0o600 }); fs.renameSync(DBF + '.tmp', DBF);
     const day = new Date().toISOString().slice(0, 10);
     if (day !== lastBak) { lastBak = day; fs.copyFileSync(DBF, path.join(BAK, 'db-' + day + '.json')); fs.readdirSync(BAK).filter(f => /^db-.*\.json$/.test(f)).sort().slice(0, -14).forEach(f => { try { fs.unlinkSync(path.join(BAK, f)); } catch (e) {} }); }
   } catch (e) { console.error('Kayıt hatası', e.message); }
@@ -58,7 +59,7 @@ function seed(n) {
     const miss = Math.random() < .3, dir = path.join(UP, tc); fs.mkdirSync(dir, { recursive: true });
     a.docs = L.SL.filter(x => !x.custom && L.req(F, x)).filter(() => !miss || Math.random() > .25).map(x => {
       const who = x.w === 'm' ? F['anne.ad'] : x.w === 'f' ? F['baba.ad'] : F.ad, wtc = x.w === 'm' ? F['anne.tc'] : x.w === 'f' ? F['baba.tc'] : F.tc, fid = 'demo-' + x.k + '-' + x.w + '.svg';
-      try { fs.writeFileSync(path.join(dir, fid), SG.svg(x.t, who, wtc, [L.WN[x.w] + ' adına', x.d])); } catch (e) {}
+      try { fs.writeFileSync(path.join(dir, fid), SG.doc(x.k, who, wtc, F, x.w, x.t)); } catch (e) {}
       return { id: x.id, k: x.k, w: x.w, name: fid, file: fid, thumb: SG.thumb(x.t, who), ck: [{ t: 'ok', m: 'Demo belge' }], info: ['Demo belge – ' + who], ts: Date.now() };
     });
     db.apps[tc] = a;
@@ -67,7 +68,7 @@ function seed(n) {
 
 // ---- güvenlik: başlıklar, hız sınırı ----
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.pdf': 'application/pdf', '.svg': 'image/svg+xml', '.traineddata': 'application/octet-stream', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
-const SEC = { 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()', 'Cross-Origin-Opener-Policy': 'same-origin' };
+const SEC = { 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()', 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Resource-Policy': 'same-origin' };
 const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 const hits = new Map();
 setInterval(() => { const t = Date.now(); hits.forEach((v, k) => { if (v.until < t && v.t + 36e5 < t) hits.delete(k); }); Object.keys(db.sessions).forEach(k => { if (db.sessions[k].exp < t) delete db.sessions[k]; }); }, 6e5).unref();
@@ -78,13 +79,32 @@ const modeOf = req => LOCK || (String(req.headers['x-mode'] || '') === 'live' ? 
 const send = (res, code, obj) => { const b = Buffer.from(JSON.stringify(obj)); res.writeHead(code, Object.assign({ 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': b.length, 'Cache-Control': 'no-store' }, SEC)); res.end(b); };
 const body = (req, max) => new Promise((ok, no) => { const c = []; let n = 0; req.on('data', d => { n += d.length; if (n > max) { no(new Error('Dosya çok büyük')); req.destroy(); } else c.push(d); }); req.on('end', () => ok(Buffer.concat(c))); req.on('error', no); });
 const json = async (req, max = 8e6) => { const b = await body(req, max); try { const o = JSON.parse(b.toString('utf8') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { throw new Error('Geçersiz istek'); } };
-const auth = (req, url) => { const t = (req.headers.authorization || '').replace(/^Bearer /, '') || url.searchParams.get('t'); const s = t && db.sessions[t]; if (!s || s.exp < Date.now()) return null; const u = db.users[s.tc]; return u ? { u, t } : null; };
+const sh = t => crypto.createHash('sha256').update(String(t)).digest('hex');
+const auth = req => { const t = (req.headers.authorization || '').replace(/^Bearer /, '').slice(0, 200), k = t && sh(t), s = k && db.sessions[k]; if (!s || s.exp < Date.now()) return null; const u = db.users[s.tc]; return u ? { u, t: k } : null; };
 const safe = s => String(s || 'dosya').replace(/[^\w.\-çğıöşüÇĞİÖŞÜ ]/g, '_').slice(-80);
 const SESSION_MS = 14 * 864e5;
 
 // yüklenen dosyanın gerçek türü (uzantıya/başlığa güvenilmez)
 const sniff = b => b.length > 12 && (b.slice(0, 4).toString('latin1') === '%PDF' ? '.pdf' : b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF ? '.jpg' : b.slice(1, 4).toString('latin1') === 'PNG' && b[0] === 0x89 ? '.png' : b.slice(0, 4).toString('latin1') === 'RIFF' && b.slice(8, 12).toString('latin1') === 'WEBP' ? '.webp' : null);
 const FKEY = /^[\w\-]{1,40}$/;
+// PDF'in sunucuda okunan gerçek üst verisi/metni (istemci beyanı değil); önbellek, yeniden başlayınca dosyadan yeniden okunur
+const PROV = new Map();
+async function provOf(tc, fn) {
+  const k = tc + '/' + fn; if (PROV.has(k)) return PROV.get(k);
+  let r = null; try { r = await pdfcheck.inspect(vault.dec(fs.readFileSync(path.join(UP, path.basename(String(tc)), path.basename(String(fn)))))); } catch (e) {}
+  if (r) { if (PROV.size > 300) PROV.clear(); PROV.set(k, r); } return r;
+}
+async function markOrigin(nd, tc) {
+  const now = Date.now();
+  for (const d of nd) {
+    if (!/\.pdf$/i.test(d.file || '')) continue;
+    const pr = await provOf(tc, d.file); if (!pr) continue;
+    const o = L.origin(pr.meta, pr.text, d.k, now); if (!o.length) continue;
+    d.meta = pr.meta; d.code = pr.code || ''; d.ck.push(...o);
+    if (d.code && !o.some(x => x.t === 'bad') && Object.entries(db.apps).some(([t2, a2]) => t2 !== tc && (a2.docs || []).some(x => x.code === d.code))) d.ck.push({ t: 'bad', m: 'Bu barkodlu belge başka bir başvuruda da kullanılmış – her başvuru kendi belgesini e-Devlet’ten almalı.', o: 1 });
+  }
+  return nd;
+}
 const cleanF = F => {
   const o = { _a: {} }; let n = 0;
   for (const k of Object.keys(F || {})) { if (k === '_a') { const a = F._a; if (a && typeof a === 'object') for (const x of Object.keys(a).slice(0, 300)) if (/^[\w.]{1,40}$/.test(x)) o._a[x] = String(a[x]).slice(0, 60); continue; } if (++n > 400 || !/^[\w.]{1,40}$/.test(k)) continue; o[k] = String(F[k] == null ? '' : F[k]).slice(0, 5000); }
@@ -92,7 +112,7 @@ const cleanF = F => {
 };
 const cleanDocs = (docs, tc) => docs.slice(0, 150).filter(d => d && typeof d === 'object').map(d => {
   const o = { id: String(d.id || '').slice(0, 40), k: String(d.k || '?').slice(0, 30), w: String(d.w || '?').slice(0, 3), name: String(d.name || '').slice(0, 120), file: /^[\w.\-]{1,60}$/.test(String(d.file || '')) ? d.file : '', thumb: typeof d.thumb === 'string' && d.thumb.length < 200000 && /^data:image\//.test(d.thumb) ? d.thumb : '', text: String(d.text || '').slice(0, 16000), src: String(d.src || '').slice(0, 10), ts: +d.ts || Date.now(), dark: !!d.dark };
-  o.ck = (Array.isArray(d.ck) ? d.ck : []).slice(0, 30).map(c => ({ t: ['ok', 'warn', 'bad'].includes(c && c.t) ? c.t : 'warn', m: String(c && c.m || '').slice(0, 400) }));
+  o.ck = (Array.isArray(d.ck) ? d.ck : []).filter(c => !(c && c.o)).slice(0, 30).map(c => ({ t: ['ok', 'warn', 'bad'].includes(c && c.t) ? c.t : 'warn', m: String(c && c.m || '').slice(0, 400) }));
   o.info = (Array.isArray(d.info) ? d.info : []).slice(0, 30).map(x => String(x).slice(0, 400));
   o.extra = (Array.isArray(d.extra) ? d.extra : []).slice(0, 30).map(x => ({ name: String(x && x.name || '').slice(0, 120), file: /^[\w.\-]{1,60}$/.test(String(x && x.file || '')) ? x.file : '' }));
   return o;
@@ -111,16 +131,17 @@ async function api(req, res, url) {
       const { tc, pw } = await json(req, 1e4); const id = String(tc || '').trim().toLowerCase().slice(0, 40), fk = 'l:' + ip + ':' + id;
       if (!id || !pw) return send(res, 400, { error: 'TCKN ve şifre girin' });
       const hit = hits.get(fk); if (hit && hit.until > Date.now()) return send(res, 429, { error: 'Çok fazla hatalı deneme – 10 dakika sonra tekrar deneyin' });
-      const fail = msg => { bucket(fk, 7, 6e5, 6e5); return send(res, 401, { error: msg }); };
+      const fail = msg => { bucket(fk, 7, 6e5, 6e5); bucket('L:' + id, 25, 6e5, 6e5); return send(res, 401, { error: msg }); };
+      if ((hits.get('L:' + id) || {}).until > Date.now()) return send(res, 429, { error: 'Çok fazla hatalı deneme – 10 dakika sonra tekrar deneyin' });
       const demoOk = mode === 'demo';
       let u = db.users[id];
       if (!u) {
-        if (!(demoOk && AUTO_USER && pw === '123' && /^\d{11}$/.test(id))) return fail(demoOk ? 'Kullanıcı bulunamadı. Demo: 11 haneli TCKN + şifre 123 veya Kayıt Ol' : 'TCKN veya şifre hatalı');
+        if (!(demoOk && AUTO_USER && pw === '123' && /^\d{11}$/.test(id))) { hash(pw, 'x'); return fail(demoOk ? 'Kullanıcı bulunamadı. Demo: 11 haneli TCKN + şifre 123 veya Kayıt Ol' : 'TCKN veya şifre hatalı'); }
         u = db.users[id] = mkUser(id, id, '123', 'student', { demo: true }); db.apps[id] = newApp(u);
       } else if (!same(u.h, hash(pw, u.salt)) && !(demoOk && u.demo && pw === '123')) return fail(demoOk ? 'Şifre hatalı' : 'TCKN veya şifre hatalı');
       if (u.role === 'admin' && !same(u.h, hash(pw, u.salt))) return fail('TCKN veya şifre hatalı');
       hits.delete(fk);
-      const t = crypto.randomBytes(24).toString('hex'); db.sessions[t] = { tc: u.tc, exp: Date.now() + SESSION_MS }; persist();
+      const t = crypto.randomBytes(24).toString('hex'); db.sessions[sh(t)] = { tc: u.tc, exp: Date.now() + SESSION_MS }; persist();
       return send(res, 200, { token: t, user: { tc: u.tc, name: u.name, role: u.role } });
     }
     if (p === '/api/email-code' && m === 'POST') {
@@ -148,14 +169,14 @@ async function api(req, res, url) {
       const a = db.apps[id] = db.apps[id] || newApp(u); a.F.ad = u.name; a.F.mail = a.F.mail || u.email; a.F.tel = a.F.tel || u.tel; if (u.uni && !a.F.fakulte) a.F.fakulte = u.uni; persist();
       return send(res, 200, { ok: true });
     }
-    const s = auth(req, url);
+    const s = auth(req);
     if (p.startsWith('/api/file/') && m === 'GET') {
       if (!s) return send(res, 401, { error: 'Oturum yok' });
       const [, , , tc, f] = p.split('/'); if (s.u.role !== 'admin' && s.u.tc !== tc) return send(res, 403, { error: 'Yetkisiz' });
       const fp = path.join(UP, path.basename(String(tc || '')), path.basename(decodeURIComponent(f || '')));
       if (!fp.startsWith(UP + path.sep) || !fs.existsSync(fp)) return send(res, 404, { error: 'Yok' });
-      res.writeHead(200, Object.assign({ 'Content-Type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'private, max-age=3600', 'Content-Security-Policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'", 'Content-Disposition': 'inline' }, SEC));
-      return fs.createReadStream(fp).pipe(res);
+      res.writeHead(200, Object.assign({ 'Content-Type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'private, no-store', 'Content-Security-Policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'", 'Content-Disposition': 'inline' }, SEC));
+      return fs.readFile(fp, (e, raw) => { if (e) { res.statusCode = 500; return res.end(); } try { res.end(vault.dec(raw)); } catch (x) { res.end(); } });
     }
     if (!s) return send(res, 401, { error: 'Oturum süresi doldu' });
     const u = s.u, cfg = curSet();
@@ -190,7 +211,7 @@ async function api(req, res, url) {
       if (p === '/api/app' && m === 'PUT') {
         const b = await json(req);
         if (b.F && typeof b.F === 'object') { a.F = cleanF(b.F); a.F.tc = a.F.tc || u.tc; if (a.F.ad && u.demo && u.name === u.tc) { u.name = a.F.ad; } }
-        if (Array.isArray(b.docs)) { const nd = cleanDocs(b.docs, u.tc), keep = new Set(nd.flatMap(d => [d.file, ...d.extra.map(x => x.file)]).filter(Boolean)); (a.docs || []).forEach(d => [d.file, ...(d.extra || []).map(x => x.file)].forEach(f => { if (f && !keep.has(f)) { try { fs.unlinkSync(path.join(UP, u.tc, path.basename(f))); } catch (e) {} } })); a.docs = nd; }
+        if (Array.isArray(b.docs)) { const nd = await markOrigin(cleanDocs(b.docs, u.tc), u.tc), keep = new Set(nd.flatMap(d => [d.file, ...d.extra.map(x => x.file)]).filter(Boolean)); (a.docs || []).forEach(d => [d.file, ...(d.extra || []).map(x => x.file)].forEach(f => { if (f && !keep.has(f)) { try { fs.unlinkSync(path.join(UP, u.tc, path.basename(f))); } catch (e) {} } })); a.docs = nd; }
         if (b.terms !== undefined) a.terms = b.terms ? 1 : 0;
         a.updated = Date.now(); persist(); return send(res, 200, { ok: true, name: u.name });
       }
@@ -200,7 +221,13 @@ async function api(req, res, url) {
         if (fs.readdirSync(dir).length > 150) return send(res, 413, { error: 'Dosya sayısı sınırına ulaşıldı' });
         const buf = await body(req, 26e6), ext = sniff(buf);
         if (!ext) return send(res, 415, { error: 'Yalnızca PDF, JPG, PNG veya WEBP yüklenebilir' });
-        const fn = Date.now().toString(36) + crypto.randomBytes(3).toString('hex') + ext; fs.writeFileSync(path.join(dir, fn), buf);
+        let pr = null;
+        if (ext === '.pdf') {
+          try { pr = await pdfcheck.inspect(buf); } catch (e) { return send(res, 415, { error: 'PDF okunamadı veya bozuk' }); }
+          if (pr.js || pr.att) return send(res, 415, { error: 'PDF içinde komut veya ek dosya var; bu tür dosyalar kabul edilmez' });
+        }
+        const fn = Date.now().toString(36) + crypto.randomBytes(3).toString('hex') + ext; fs.writeFileSync(path.join(dir, fn), vault.enc(buf), { mode: 0o600 });
+        if (pr) { if (PROV.size > 300) PROV.clear(); PROV.set(u.tc + '/' + fn, pr); }
         return send(res, 200, { file: fn, size: buf.length });
       }
       if (p === '/api/submit' && m === 'POST') {
@@ -219,6 +246,12 @@ async function api(req, res, url) {
       if (p === '/api/admin/seed' && m === 'POST') { if (mode !== 'demo') return send(res, 403, { error: 'Bu işlem yalnızca demo modunda kullanılabilir' }); seed(Math.min(50, +(url.searchParams.get('n')) || 12)); persist(); return send(res, 200, { ok: true }); }
       if (p === '/api/admin/demo' && m === 'DELETE') { let n = 0; Object.values(db.users).filter(x => x.demo).forEach(x => { delete db.apps[x.tc]; delete db.users[x.tc]; try { fs.rmSync(path.join(UP, x.tc), { recursive: true, force: true }); } catch (e) {} n++; }); persist(); return send(res, 200, { ok: true, n }); }
       if (p === '/api/admin/pw' && m === 'POST') { const b = await json(req, 1e4), pw = String(b.pw || ''); if (pw.length < 8) return send(res, 400, { error: 'Şifre en az 8 karakter olmalı' }); if (!same(u.h, hash(String(b.old || ''), u.salt))) return send(res, 403, { error: 'Mevcut şifre hatalı' }); const salt = crypto.randomBytes(8).toString('hex'); u.salt = salt; u.h = hash(pw, salt); persist(); return send(res, 200, { ok: true, note: 'ADMIN_PW ortam değişkeni tanımlıysa sunucu yeniden başlayınca o şifre geçerli olur' }); }
+      const dm = p.match(/^\/api\/admin\/app\/(\d+)\/doc\/([^/]+)$/);
+      if (dm && m === 'DELETE' && db.apps[dm[1]]) {
+        const a = db.apps[dm[1]], id = decodeURIComponent(dm[2]), d = (a.docs || []).find(x => x.id === id); if (!d) return send(res, 404, { error: 'Belge yok' });
+        [d.file, ...(d.extra || []).map(x => x.file)].filter(Boolean).forEach(f => { try { fs.unlinkSync(path.join(UP, dm[1], path.basename(f))); } catch (e) {} PROV.delete(dm[1] + '/' + f); });
+        a.docs = a.docs.filter(x => x !== d); if (a.status === 'Beklemede') a.status = 'Eksik belge'; a.updated = Date.now(); persist(); return send(res, 200, { ok: true });
+      }
       const mm = p.match(/^\/api\/admin\/app\/(\d+)$/);
       if (mm && db.apps[mm[1]]) {
         const a = db.apps[mm[1]];

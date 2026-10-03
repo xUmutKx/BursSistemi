@@ -60,3 +60,11 @@ v10 NOTLARI
 - Demo / GitHub Pages: e-posta gönderilemez; kod ekranda gösterilir ve kutuya otomatik girilir.
 - Profil (üst çubuk): e-posta (yeni adres için kod), telefon, şifre değiştirme (mevcut şifre gerekir). Şifre değişince diğer oturumlar kapanır.
 - Başvuru kuralları "gönderilmiş" ve "belgeler tam" her zaman geçerli: eksik belgeli başvuru Elendi görünür.
+
+v11 NOTLARI (belge doğruluğu + güvenlik)
+- PDF KAYNAK DOĞRULAMA: Yüklenen PDF e-Devlet/ÖSYM çıktısı mı sunucuda kontrol edilir (istemciye güvenilmez): barkod doğrulama ifadesi + kod, üretici (Jasper/Telerik/iText/OpenPDF/SGK), düzenleme programı izi (Word, Draw, Photoshop, iLovePDF…), dosya oluşturma tarihi (30 gün), değiştirilme izi, aynı barkodun başka başvuruda kullanılması. Taranmış/fotoğraf PDF'i ve düzenlenmiş PDF kabul edilmez (düzenlenmiş ama kodu olan "uyarı" olur, yönetici belge-dogrulama'dan kodu doğrular). Ekran görüntüleri bu kontrolden muaftır. PDF'de komut (JavaScript) veya ek dosya varsa yükleme reddedilir.
+- ŞİFRELİ DEPOLAMA: db.json, yedekler ve yüklenen belgeler AES-256-GCM ile şifrelenir. Anahtar: DATA_KEY ortam değişkeni (önerilen) ya da data/.anahtar. Anahtarı kaybederseniz veri açılamaz; yedekleyin.
+- Oturum anahtarları özet olarak saklanır, adres çubuğunda ?t= anahtarı kabul edilmez, kullanıcı başına genel giriş kilidi, belgeler önbelleğe alınmaz.
+- Yönetici: başvuru ayrıntısında her belgenin yanında "Sil" (dosya sunucudan da silinir).
+- Hız: PDF'ler OCR'sız saniyeler içinde okunur; ekran görüntüleri için OCR çözünürlüğü düşürüldü.
+- v11.1: Hazırlık sınıfı kaldırıldı. Anne/baba T.C. isteğe bağlı (yabancı uyruklu olabilir). Giriş alanı "T.C. Kimlik No / YKN" (tam klavye; yönetici de bu alandan girer). Demo oturumu yenilemede açık kalır. Demo örnek veri gerçekçi e-Devlet/ÖSYM/transkript görünümlü belgelerle (barkod, karekod, notlar) otomatik gelir.

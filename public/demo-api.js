@@ -20,7 +20,7 @@
       const miss = Math.random() < .3;
       a.docs = L.SL.filter(x => L.req(F, x)).filter(() => !miss || Math.random() > .25).map(x => {
         const who = x.w === 'm' ? F['anne.ad'] : x.w === 'f' ? F['baba.ad'] : F.ad, wtc = x.w === 'm' ? F['anne.tc'] : x.w === 'f' ? F['baba.tc'] : F.tc, fid = 'demo-' + x.k + '-' + x.w + '.svg';
-        jobs.push(fput(tc + '/' + fid, new Blob([SG.svg(x.t, who, wtc, [WN_[x.w] + ' adına', x.d])], { type: 'image/svg+xml' })).catch(() => {}));
+        jobs.push(fput(tc + '/' + fid, new Blob([SG.doc(x.k, who, wtc, F, x.w, x.t)], { type: 'image/svg+xml' })).catch(() => {}));
         return { id: x.id, k: x.k, w: x.w, name: fid, file: fid, thumb: SG.thumb(x.t, who), ck: [{ t: 'ok', m: 'Demo belge' }], info: ['Demo belge – ' + who], ts: Date.now() };
       });
       db.apps[tc] = a;
@@ -96,6 +96,8 @@
       if (p === '/api/admin/settings') { if (m === 'PUT') { db.settings = L.mergeSet(b.settings); await save(); return R(200, { ok: true, settings: db.settings }); } return R(200, { settings: db.settings }); }
       if (p === '/api/admin/seed' && m === 'POST') { if (LIVE) return R(403, { error: 'Bu işlem yalnızca demo modunda kullanılabilir' }); seed(+url.searchParams.get('n') || 12); await Promise.all(jobs); await save(); return R(200, { ok: true }); }
       if (p === '/api/admin/demo' && m === 'DELETE') { let n = 0; Object.values(db.users).filter(x => x.demo).forEach(x => { delete db.apps[x.tc]; delete db.users[x.tc]; n++; }); await save(); return R(200, { ok: true, n }); }
+      const dm = p.match(/^\/api\/admin\/app\/(\d+)\/doc\/([^/]+)$/);
+      if (dm && m === 'DELETE' && db.apps[dm[1]]) { const a = db.apps[dm[1]], id = decodeURIComponent(dm[2]); if (!(a.docs || []).some(x => x.id === id)) return R(404, { error: 'Belge yok' }); a.docs = a.docs.filter(x => x.id !== id); if (a.status === 'Beklemede') a.status = 'Eksik belge'; a.updated = Date.now(); await save(); return R(200, { ok: true }); }
       const mm = p.match(/^\/api\/admin\/app\/(\d+)$/);
       if (mm && db.apps[mm[1]]) { const a = db.apps[mm[1]];
         if (m === 'GET') return R(200, { app: { ...a, uid: mm[1], acc: adminView(a, mm[1]).acc } });
