@@ -400,7 +400,7 @@
     const sib = (F.bakma || '').split('\n').map(x => x.trim()).filter(x => x && !/^yok/i.test(x)).length;
     const dead = (F['anne.hayat'] === 'Hayır' ? 1 : 0) + (F['baba.hayat'] === 'Hayır' ? 1 : 0), mem = 1 + sib + (2 - dead);
     const g = parseFloat(String(F.gno || '').replace(',', '.')), pr = L.progress(F, a.docs || []);
-    return { total: inc, pc: Math.round(inc / mem), mem, houses, cars, sib, dead, gno: isNaN(g) ? null : g, burs: L.money(F.ozelMik) + L.money(F.kamuMik), rent: L.money(F.kira), away: F.ailedeMi === 'Hayır' || !!F.yurt, dis: F.engel === 'Evet', docsOk: pr.ok >= pr.n && !(a.docs || []).some(d => L.dstat(d) === 'bad'), dp: pr.ok + '/' + pr.n };
+    return { total: inc, pc: Math.round(inc / mem), mem, houses, cars, sib, dead, gno: isNaN(g) ? null : g, burs: L.money(F.ozelMik) + L.money(F.kamuMik), rent: L.money(F.kira), away: F.ailedeMi === 'Hayır' || !!F.yurt, dis: F.engel === 'Evet', docsOk: pr.ok >= pr.n && !(a.docs || []).some(d => L.dstat(d) === 'bad'), docsBad: (a.docs || []).some(d => L.dstat(d) === 'bad'), docsMiss: pr.miss.length > 0, dp: pr.ok + '/' + pr.n };
   };
   L.CRIT = [
     { id: 'pc', t: 'Kişi başı gelir (düşük ise yüksek puan)', w: 30, p: 15000, pl: 'Tavan TL' }, { id: 'tot', t: 'Toplam hane geliri (düşük ise yüksek puan)', w: 10, p: 60000, pl: 'Tavan TL' },
@@ -455,7 +455,7 @@
   L.fails = (a, m, S) => {
     const R = S.rules, r = [], on = k => R[k] && R[k].on, v = k => +R[k].v;
     if (!['Beklemede', 'Onaylandı'].includes(a.status)) r.push('Başvuru gönderilmemiş');
-    if (!m.docsOk) r.push('Belgeler eksik/sorunlu (' + m.dp + ')');
+    if (m.docsBad) r.push('Belgeler sorunlu (' + m.dp + ')'); // eksik belge eleme değil, "İncelenecek" (rank)
     if (on('maxTot') && m.total > v('maxTot')) r.push('Toplam gelir ' + m.total + ' TL > ' + v('maxTot'));
     if (on('maxPc') && m.pc > v('maxPc')) r.push('Kişi başı gelir ' + m.pc + ' TL > ' + v('maxPc'));
     if (on('maxHouse') && m.houses > v('maxHouse')) r.push('Ev sayısı ' + m.houses + ' > ' + v('maxHouse'));
@@ -465,9 +465,10 @@
   };
   L.rank = (apps, S) => {
     const rows = apps.map(a => { const m = L.metrics(a), f = L.fails(a, m, S); return { a, m, f, sc: L.score(m, S) }; });
-    const el = rows.filter(r => !r.f.length).sort((x, y) => y.sc - x.sc || x.m.pc - y.m.pc || (y.m.gno || 0) - (x.m.gno || 0));
+    const el = rows.filter(r => !r.f.length && !r.m.docsMiss).sort((x, y) => y.sc - x.sc || x.m.pc - y.m.pc || (y.m.gno || 0) - (x.m.gno || 0));
     el.forEach((r, i) => { r.rank = i + 1; r.res = i < S.quota ? 'Burs' : 'Yedek'; });
     rows.filter(r => r.f.length).forEach(r => { r.rank = 0; r.res = 'Elendi'; });
+    rows.filter(r => !r.f.length && r.m.docsMiss).forEach(r => { r.rank = 0; r.res = 'İncelenecek'; }); // eksik belge: yönetici karar verir
     return rows;
   };
 

@@ -31,7 +31,7 @@ function flushSave() {
   return sv;
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden && dirty) flushSave(); });
-const stBadge = s => ({ Taslak: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', Beklemede: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', 'Eksik belge': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', Onaylandı: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', Reddedildi: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' }[s] || 'bg-gray-100 text-gray-700');
+const stBadge = s => ({ Taslak: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', Beklemede: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', 'Eksik belge': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', Onaylandı: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', Reddedildi: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', İncelenecek: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' }[s] || 'bg-gray-100 text-gray-700');
 const dcls = { ok: 'text-green-600 dark:text-green-400', warn: 'text-orange-600 dark:text-orange-400', bad: 'text-red-600 dark:text-red-400' };
 const dico = { ok: 'check_circle', warn: 'warning', bad: 'cancel' };
 
@@ -233,12 +233,15 @@ function assign(i, w) {
   else { A.docs = A.docs.filter(x => x.id !== d.id); A.docs.push(d); L.apply(F, r.patches); }
   L.refresh(F, A.docs); save(); renderDocs(); sidebar();
 }
-const NONE_OK = ['kira', 'kira_aile', 'a4a', 'a4b', 'a4c'];
-function markNone(id) {
-  const x = SL.find(y => y.id === id); if (!x) return;
-  A.docs = A.docs.filter(d => d.id !== id);
-  A.docs.push({ id, k: x.k, w: x.w, name: 'Beyan: yok', file: '', thumb: '', text: '', src: 'beyan', ts: Date.now(), ck: [{ t: 'ok', m: 'Bu belge/kayıt yok olarak beyan edildi' }], info: ['Yok olarak beyan edildi'] });
-  dirty = true; flushSave(); renderDocs(); sidebar(); toast('“Yok” olarak kaydedildi');
+// "Belge yok" anahtarı: açıkken belge beyan edilmiş sayılır (zorunlu değil); dosya yüklenince beyan kalkar
+function setNone(id, on) {
+  if (on) {
+    const x = SL.find(y => y.id === id); if (!x) return;
+    A.docs = A.docs.filter(d => d.id !== id);
+    A.docs.push({ id, k: x.k, w: x.w, name: 'Beyan: yok', file: '', thumb: '', text: '', src: 'beyan', ts: Date.now(), ck: [{ t: 'ok', m: 'Bu belge/kayıt yok olarak beyan edildi' }], info: ['Yok olarak beyan edildi'] });
+    toast('“Belge yok” işaretlendi');
+  } else { A.docs = A.docs.filter(d => !(d.id === id && d.src === 'beyan')); }
+  dirty = true; flushSave(); renderDocs(); sidebar();
 }
 function delDoc(i) { if (!confirm('Bu belge silinsin mi?')) return; A.docs.splice(i, 1); save(); renderDocs(); sidebar(); }
 function pick(id) { const i = document.createElement('input'); i.type = 'file'; i.accept = 'application/pdf,image/*'; i.onchange = () => handleFiles(i.files, id); i.click(); }
@@ -436,7 +439,7 @@ function slot(x) {
    <p class="text-[11px] text-gray-500 leading-tight mb-1">${x.w !== 's' && x.w !== 'a' ? `<b class="text-primary-600">${WN[x.w]}</b> · ` : ''}${E(x.d)}</p>
    ${d ? `<p class="text-[11px] text-gray-400 truncate">${E(d.name)}${(d.extra || []).length ? ' (+' + d.extra.length + ' ek)' : ''}</p>${d.info.map(t => `<div class="text-[11px] text-gray-700 dark:text-gray-300"><span class="ms text-primary-500 mr-1">chevron_right</span>${E(t)}</div>`).join('')}${d.ck.filter(c => c.t !== 'ok').map(c => `<div class="text-[11px] ${dcls[c.t]}"><span class="ms mr-1">${dico[c.t]}</span>${E(c.m)}</div>`).join('')}` : ''}
    <div class="mt-2 flex flex-wrap gap-1.5">${x.h ? `<span class="text-[11px] text-gray-500 w-full">${E(x.h)}</span>` : ''}${/^http/.test(x.l) ? `<a class="btn" href="${x.l}" target="_blank" rel="noopener"><span class="ms">open_in_new</span> e-Devlet'ten al</a>` : ''}
-   <button class="btn" onclick="pick('${x.id}')"><span class="ms">upload</span>${d ? 'Değiştir / ek ekle' : 'Dosya seç'}</button>${!d ? `<button class="btn" title="Bu belge sizde mevcut değilse (ör. yabancı uyruklu öğrenci) işaretleyin" onclick="markNone('${x.id}')"><span class="ms">block</span> Yok / mevcut değil</button>` : ''}${d && d.src !== 'beyan' ? `<button class="btn" onclick="pv(${i})"><span class="ms">visibility</span> Önizle</button>` : ''}${d ? `<button class="btn text-red-600" onclick="delDoc(${i})"><span class="ms">delete</span></button>` : ''}</div></div></div>`;
+   <button class="btn" onclick="pick('${x.id}')"><span class="ms">upload</span>${d ? 'Değiştir / ek ekle' : 'Dosya seç'}</button>${!d || d.src === 'beyan' ? `<label class="btn cursor-pointer" title="Belge sizde yoksa işaretleyin; yine de dosya yükleyebilirsiniz"><input type="checkbox" class="w-4 h-4" ${d ? 'checked' : ''} onchange="setNone('${x.id}',this.checked)"> Belge yok</label>` : ''}${d && d.src !== 'beyan' ? `<button class="btn" onclick="pv(${i})"><span class="ms">visibility</span> Önizle</button>` : ''}${d ? `<button class="btn text-red-600" onclick="delDoc(${i})"><span class="ms">delete</span></button>` : ''}</div></div></div>`;
 }
 async function pdfPages(url, host) {
   const pdf = await pdfjsLib.getDocument({ data: await (await fetch(url)).arrayBuffer() }).promise; host.innerHTML = '';
@@ -495,7 +498,7 @@ async function submitApp() {
   const st = L.steps(F, A.docs, A.terms).find(x => !x.ok); if (st && !S.unlock) return toast(st.why);
   try { dirty = true; await flushSave(); const d = await api('/api/submit?ack=1' + (st ? '&force=1' : ''), { method: 'POST' }); if (d.rev !== undefined) A.rev = d.rev; A.status = d.status; A.sent = Date.now(); toast('Başvuru gönderildi'); confetti(); go('sum'); } catch (e) { toast(e.message); }
 }
-const AS = { Burs: 'Onaylandı', Yedek: 'Beklemede', Elendi: 'Reddedildi' }, TL = n => Math.round(n || 0).toLocaleString('tr-TR') + ' ₺';
+const AS = { Burs: 'Onaylandı', Yedek: 'Beklemede', Elendi: 'Reddedildi', İncelenecek: 'İncelenecek' }, TL = n => Math.round(n || 0).toLocaleString('tr-TR') + ' ₺';
 setInterval(async () => { if (S.user && S.user.role === 'admin' && !document.hidden && !($('#adet') || {}).innerHTML) { try { S.adm.list = (await api('/api/admin/apps')).apps.filter(a => window.DEMO || !a.demo); admTable(); } catch (e) {} } }, 10000);
 async function loadAdmin() {
   try { S.adm.list = (await api('/api/admin/apps')).apps.filter(a => window.DEMO || !a.demo); S.adm.set = L.mergeSet((await api('/api/admin/settings')).settings); } catch (e) { S.adm.set = S.adm.set || L.defSet(); }
@@ -537,7 +540,7 @@ function vList() {
   return `<div class="card overflow-hidden flex flex-col xl:flex-row mdf"><details class="mdpanel w-full border-b xl:border-b-0 xl:border-r border-gray-200 dark:border-amoled-border bg-gray-50/50 dark:bg-amoled-base/30" ${innerWidth >= 1280 ? 'open' : ''}><summary class="mdsum"><span class="ms">tune</span><span class="flex-1">Filtre ve sıralama</span><span id="afc" class="mdbadge">${admActive()}</span></summary><div class="p-4 pt-1 space-y-4">
    <md-outlined-text-field class="mdw" label="Arama" placeholder="İsim, TCKN, fakülte" value="${E(a.q)}" oninput="admF('q',this.value)"><span slot="leading-icon" class="ms">search</span></md-outlined-text-field>
    <div class="grid grid-cols-2 gap-3">${sel('Sırala', a.sort, [['rank', 'Sıra (kural)'], ['score', 'Puan'], ['total', 'Toplam gelir'], ['pc', 'Kişi başı gelir'], ['houses', 'Ev sayısı'], ['cars', 'Araç sayısı'], ['sib', 'Kardeş'], ['gno', 'Not ort.'], ['docs', 'Belge'], ['sent', 'Başvuru tarihi'], ['name', 'Ad']], 'S.adm.sort=this.value;admTable()')}${sel('Yön', a.dir, [[1, 'Artan'], [-1, 'Azalan']], 'S.adm.dir=+this.value;admTable()')}
-   ${sel('Durum', a.st, stOpts, "admF('st',this.value)")}${sel('Sonuç (kural)', a.res, [['all', 'Tümü'], ['Burs', 'Burs'], ['Yedek', 'Yedek'], ['Elendi', 'Elendi']], "admF('res',this.value)")}
+   ${sel('Durum', a.st, stOpts, "admF('st',this.value)")}${sel('Sonuç (kural)', a.res, [['all', 'Tümü'], ['Burs', 'Burs'], ['Yedek', 'Yedek'], ['İncelenecek', 'İncelenecek'], ['Elendi', 'Elendi']], "admF('res',this.value)")}
    ${sel('Sınıf', a.cls, [['all', 'Tümü'], ...[1, 2, 3, 4, 5, 6].map(x => [String(x), x + '. sınıf'])], "admF('cls',this.value)")}${window.DEMO ? sel('Kayıt türü', a.kind, [['all', 'Tümü'], ['real', 'Gerçek'], ['demo', 'Demo']], "admF('kind',this.value)") : ''}</div>
    ${sl('v_inc', 'Toplam gelir', TL(+a.incMin || 0) + ' - ' + (a.incMax ? TL(+a.incMax) : 'sınırsız'), `range min="0" max="${INC_MAX}" step="5000" value-start="${+a.incMin || 0}" value-end="${+a.incMax || INC_MAX}"`, "admSl('inc',this)")}
    ${sl('v_pc', 'Kişi başı gelir en fazla', a.pcMax ? TL(+a.pcMax) : 'sınırsız', `min="0" max="${PC_MAX}" step="500" value="${+a.pcMax || PC_MAX}"`, "admSl('pcMax',this)")}

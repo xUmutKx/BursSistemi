@@ -94,7 +94,13 @@ function helpOpen(sec) {
 }
 function helpGo(id) { document.querySelectorAll('#hlp .chip').forEach(c => c.classList.toggle('on', c.getAttribute('onclick') === `helpGo('${id}')`)); document.querySelectorAll('#hlp section').forEach(s => s.classList.toggle('hlp-cur', s.id === 'h_' + id)); const e = $('#h_' + id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function helpClose() { const h = $('#hlp'); if (h) h.classList.add('hidden'); try { if (S.user && S.user.role === 'admin') localStorage.tto_help_admin = '2'; } catch (e) {} }
-function helpFirstRun() { try { if (S.user && S.user.role === 'admin' && localStorage.tto_help_admin !== '2') setTimeout(() => helpOpen('genel'), 400); } catch (e) {} }
+function helpFirstRun() { try { if (S.user && S.user.role === 'admin' && localStorage.tto_help_admin !== '2') setTimeout(helpShort, 400); } catch (e) {} }
+// ilk açılışta kısa mesaj; ayrıntılı rehber üst çubuktaki ? ile açılır
+function helpShort() {
+  let h = $('#hlp'); if (!h) { h = document.createElement('div'); h.id = 'hlp'; h.className = 'fixed inset-0 z-[95] bg-black/70 overflow-auto p-3 sm:p-6'; h.onclick = e => { if (e.target === h) helpClose(); }; document.body.appendChild(h); }
+  h.innerHTML = `<div class="card max-w-md mx-auto p-5 sm:p-6 fade-in hlp" role="dialog" aria-modal="true" aria-label="Hoş geldiniz"><h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Yönetim paneline hoş geldiniz</h3><p class="text-sm text-gray-700 dark:text-gray-300 mb-3">Başvuruyu açmak için satırdaki <b>İncele</b> düğmesine dokunun. Sarı <b>İncelenecek</b> başvurularda belge eksiktir; karar yöneticiye aittir.</p><p class="text-xs text-gray-500 mb-4">Ayrıntılı rehber için üst çubuktaki <b>?</b> simgesine dokunun.</p><div class="text-right"><button class="btn-p" onclick="helpClose()">Anladım</button></div></div>`;
+  h.classList.remove('hidden');
+}
 
 // ---------- Dönem durumu (öğrenci/giriş) ----------
 function termInfo() {
